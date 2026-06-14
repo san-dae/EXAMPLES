@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithm & DP Visualizers</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            padding: 40px 20px;
+            margin: 0;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 50px;
+            border-bottom: 1px solid #333;
+            padding-bottom: 20px;
+        }
+        h1 {
+            color: #00bcd4;
+            margin: 0 0 10px 0;
+        }
+        p {
+            color: #888;
+            font-size: 16px;
+            margin: 0;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        .card {
+            background-color: #1e1e1e;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .card:hover {
+            border-color: #00bcd4;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 20px rgba(0, 188, 212, 0.1);
+        }
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 8px;
+        }
+        .card-tag {
+            display: inline-block;
+            font-size: 12px;
+            background-color: rgba(0, 188, 212, 0.1);
+            color: #00bcd4;
+            padding: 2px 8px;
+            border-radius: 4px;
+            margin-bottom: 12px;
+            width: max-content;
+        }
+        .card-desc {
+            font-size: 14px;
+            color: #aaa;
+            line-height: 1.4;
+            margin-bottom: 20px;
+            flex-grow: 1;
+        }
+        .card-link {
+            display: inline-block;
+            text-decoration: none;
+            color: #121212;
+            background-color: #00bcd4;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+        .card-link:hover {
+            background-color: #008ba3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Data Structures & Algorithms Repository</h1>
+        <p>Interactive step-by-step executions of tricky dynamic programming states.</p>
+    </header>
+
+    <main class="grid">
+        <div class="card">
+            <div>
+                <div class="card-title">Perfect Sum Problem</div>
+                <div class="card-tag">Dynamic Programming</div>
+                <div class="card-desc">Finds the number of subsets that equal a specific target value. Tracking selections across rows via a explicit 2D tracking matrix matrix.</div>
+            </div>
+            <a href="./perfect-sum/index.html" class="card-link">Launch Visualizer</a>
+        </div>
+
+        <div class="card" style="opacity: 0.5;">
+            <div>
+                <div class="card-title">Next Problem...</div>
+                <div class="card-tag">Locked</div>
+                <div class="card-desc">Add another subfolder and duplicate a route block here when tracking new data algorithms.</div>
+            </div>
+            <a href="#" class="card-link" style="background: #444; pointer-events: none;">Unavailable</a>
+        </div>
+    </main>
+</div>
+
+</body>
+</html>
