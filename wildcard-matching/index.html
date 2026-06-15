@@ -266,7 +266,7 @@
     <div class="subtitle">See exactly how Dynamic Programming and Two-Pointer approaches tackle unpredictable steps</div>
 
     <div class="example-banner">
-        Tracing Example: String <strong>s = "xbcd"</strong> | Pattern <strong>p = "*cd"</strong>
+        Tracing Example: String <strong>s = "axbbyc"</strong> | Pattern <strong>p = "*b?*c"</strong>
     </div>
 
     <div class="tabs">
@@ -314,8 +314,8 @@
     </div>
 
     <script>
-        const s = "xbcd";
-        const p = "*cd";
+        const s = "axbbyc";
+        const p = "*b?*c";
 
         let currentMethod = 'pointer';
         let currentStepIdx = 0;
@@ -328,7 +328,7 @@
             steps.push({
                 s_ptr, p_ptr, star_idx, s_match,
                 line: 1,
-                msg: "Initialize pointers at the start. No checkpoints saved yet."
+                msg: "Initialize pointers at index 0. No asterisks encountered yet."
             });
 
             while (s_ptr < s.length) {
@@ -338,7 +338,9 @@
                     steps.push({
                         s_ptr, p_ptr, star_idx, s_match,
                         line: 2,
-                        msg: `'${s[old_s]}' matches '${p[old_p]}'. Cleanly advance both pointers forward.`
+                        msg: p[old_p] === '?' 
+                            ? `Match found! Wildcard '?' successfully consumes character '${s[old_s]}'. Move both forward.`
+                            : `Exact literal match! '${s[old_s]}' matches '${p[old_p]}'. Cleanly advance both pointers.`
                     });
                 }
                 else if (p_ptr < p.length && p[p_ptr] === '*') {
@@ -348,7 +350,7 @@
                     steps.push({
                         s_ptr, p_ptr, star_idx, s_match,
                         line: 5,
-                        msg: `Hit '*'. Save checkpoint here (star_idx=${star_idx}, s_match=${s_match}). Advance pattern pointer to see if '*' can match 0 elements.`
+                        msg: `Hit asterisk '*'. Updating checkpoint: star_idx=${star_idx}, s_match=${s_match}. Advancing pattern pointer dynamically assuming 0 characters consumed.`
                     });
                 }
                 else if (star_idx !== -1) {
@@ -358,14 +360,14 @@
                     steps.push({
                         s_ptr, p_ptr, star_idx, s_match,
                         line: 9,
-                        msg: `Mismatch! Dead end reached. Rollback to checkpoint. Expand '*' match scope up to index ${s_match} ('${s[s_match-1]}').`
+                        msg: `Mismatch encountered. Triggering rollback to last active checkpoint (star_idx=${star_idx}). Extending matching range of '*' up to character index ${s_match} ('${s[s_match-1]}').`
                     });
                 }
                 else {
                     steps.push({
                         s_ptr, p_ptr, star_idx, s_match,
                         line: 12,
-                        msg: "Mismatch occurred and no active '*' checkpoint exists to rescue us. Return False.",
+                        msg: `Direct mismatch between '${s[s_ptr]}' and '${p[p_ptr] || 'END'}' without any recovery asterisk fallback. Matching sequence failed.`,
                         ended: true,
                         result: false
                     });
@@ -378,7 +380,7 @@
                 steps.push({
                     s_ptr, p_ptr, star_idx, s_match,
                     line: 15,
-                    msg: "Consume trailing asterisks in pattern which naturally evaluate to empty sequences."
+                    msg: "Consume trailing sequence components of asterisks evaluating to empty expressions."
                 });
             }
 
@@ -386,7 +388,7 @@
             steps.push({
                 s_ptr, p_ptr, star_idx, s_match,
                 line: 16,
-                msg: finalResult ? "Pattern completely cleared. Match evaluation successful!" : "Leftover pattern elements cannot be parsed. Match failed.",
+                msg: finalResult ? "Both string and pattern successfully parsed to completion. True!" : "Pattern evaluation hung up. Mismatched residuals remain.",
                 ended: true,
                 result: finalResult
             });
@@ -404,7 +406,7 @@
                 matrix: JSON.parse(JSON.stringify(matrix)),
                 r: 0, c: 0, lookbacks: [],
                 line: 2,
-                msg: "Base Case: An empty string matches an empty pattern. dp[0][0] = true."
+                msg: "Base Case Setup: Empty expression matching empty bounds evaluates to True. dp[0][0] = true."
             });
 
             for (let j = 1; j <= n; j++) {
@@ -418,7 +420,7 @@
                     matrix: JSON.parse(JSON.stringify(matrix)),
                     r: 0, c: j, lookbacks: look,
                     line: 4,
-                    msg: `Row 0 Init (Empty String): Does pattern prefix up to '${p[j-1]}' match ""? Depends directly on left cell.`
+                    msg: `Row 0 initialization: Pattern prefix evaluation targeting empty components up to token '${p[j-1]}'.`
                 });
             }
 
@@ -432,18 +434,20 @@
                         look = [ [i-1, j-1] ];
                         matrix[i][j] = matrix[i-1][j-1];
                         lineNum = 9;
-                        msg = `'${s[i-1]}' matches '${p[j-1]}'. Copy the diagonal result from dp[i-1][j-1].`;
+                        msg = p[j-1] === '?'
+                            ? `Token '?' handles character '${s[i-1]}'. Pull validation state diagonally from dp[i-1][j-1].`
+                            : `Literal match found for '${s[i-1]}'. Carry down diagonal value from dp[i-1][j-1].`;
                     } else if (p[j-1] === '*') {
                         look = [ [i-1, j], [i, j-1] ];
                         let topCell = matrix[i-1][j] === 'T';
                         let leftCell = matrix[i][j-1] === 'T';
                         matrix[i][j] = (topCell || leftCell) ? 'T' : 'F';
                         lineNum = 11;
-                        msg = `Found '*'. Looks up (dp[i-1][j]: match sequence) OR looks left (dp[i][j-1]: match empty).`;
+                        msg = `Found '*'. Evaluating dependencies: Up (dp[i-1][j]: match sequence extension) OR Left (dp[i][j-1]: match empty sequence).`;
                     } else {
                         matrix[i][j] = 'F';
                         lineNum = 12;
-                        msg = `Character mismatch between '${s[i-1]}' and '${p[j-1]}'. Explicitly set to false.`;
+                        msg = `Character mismatch between sequence token '${s[i-1]}' and pattern token '${p[j-1]}'. Bound to False.`;
                     }
 
                     steps.push({
@@ -459,7 +463,7 @@
                 matrix: JSON.parse(JSON.stringify(matrix)),
                 r: m, c: n, lookbacks: [],
                 line: 16,
-                msg: `Execution complete. Read bottom-right cell value dp[${m}][${n}] = ${matrix[m][n] === 'T' ? 'True' : 'False'}.`
+                msg: `Tracing phase finalized. Read output from matrix cell bottom-right: dp[${m}][${n}] = ${matrix[m][n] === 'T' ? 'True' : 'False'}.`
             });
             return steps;
         }
