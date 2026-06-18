@@ -3,17 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minimum Cost to Cut a Stick - DP Visualizer</title>
+    <title>Minimum Cost to Cut a Stick - Visualizer</title>
     <style>
         :root {
-            --bg-color: #1e1e2e;
-            --card-bg: #252538;
-            --text-color: #cdd6f4;
-            --primary: #89b4fa;
-            --secondary: #f5c2e7;
-            --accent: #a6e3a1;
-            --highlight: #f9e2af;
-            --danger: #f38ba8;
+            --bg-color: #121212;
+            --card-bg: #1e1e1e;
+            --border-color: #333;
+            --text-color: #e0e0e0;
+            --primary: #00bcd4;
+            --primary-dark: #008ba3;
+            --secondary: #e91e63;
+            --accent: #4caf50;
+            --highlight: #ffeb3b;
+            --rod-wood: linear-gradient(to bottom, #8d6e63, #5d4037);
+            --rod-active: linear-gradient(to bottom, #ffb74d, #f57c00);
         }
 
         body {
@@ -21,518 +24,484 @@
             background-color: var(--bg-color);
             color: var(--text-color);
             margin: 0;
-            padding: 20px;
+            padding: 30px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
         }
 
-        h1 { margin-bottom: 5px; color: var(--primary); }
-        .subtitle { margin-top: 0; margin-bottom: 25px; color: #a6adc8; font-size: 0.95rem; }
-
         .container {
+            max-width: 1000px;
+            width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 20px;
-            max-width: 1100px;
-            width: 100%;
+            gap: 25px;
         }
+
+        header {
+            text-align: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        h1 { color: var(--primary); margin: 0 0 5px 0; font-size: 28px; }
+        p { color: #888; margin: 0; font-size: 15px; }
 
         .panel {
             background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         }
 
-        /* Controls styling */
+        /* Controls Area */
         .controls-row {
             display: flex;
-            gap: 15px;
+            gap: 20px;
             align-items: center;
             flex-wrap: wrap;
         }
-        label { font-weight: bold; font-size: 0.9rem; }
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        label { font-size: 14px; color: #aaa; font-weight: 600; }
         input[type="text"] {
-            background: #313244;
-            border: 1px solid #45475a;
+            background: #2a2a2a;
+            border: 1px solid var(--border-color);
             color: #fff;
             padding: 8px 12px;
-            border-radius: 6px;
+            border-radius: 4px;
             font-family: monospace;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+        input[type="text"]:focus {
+            border-color: var(--primary);
+            outline: none;
         }
         button {
             background-color: var(--primary);
-            color: #11111b;
+            color: #121212;
             border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
+            padding: 9px 18px;
+            border-radius: 4px;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease;
         }
-        button:hover { opacity: 0.9; transform: translateY(-1px); }
-        button:disabled { background: #585b70; cursor: not-allowed; color: #a6adc8; }
-        .btn-secondary { background-color: #45475a; color: var(--text-color); }
+        button:hover { background-color: var(--primary-dark); transform: translateY(-1px); }
+        .btn-secondary { background-color: #333; color: var(--text-color); border: 1px solid #444; }
+        .btn-secondary:hover { background-color: #444; }
 
-        /* Rod Sandbox Styling */
-        .rod-container {
+        /* The Physical Rod Engine */
+        .rod-wrapper {
+            margin: 50px 0 30px 0;
+            padding: 0 10px;
             position: relative;
-            margin: 40px 0 20px 0;
-            padding: 0 20px;
         }
         .rod-base {
-            height: 30px;
-            background: #313244;
+            height: 36px;
+            background: var(--rod-wood);
             border-radius: 6px;
             position: relative;
-            border: 2px solid #45475a;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.6), 0 3px 6px rgba(0,0,0,0.3);
+            border: 1px solid #3e2723;
+            overflow: hidden;
         }
         .rod-active-segment {
             position: absolute;
             height: 100%;
-            background: rgba(137, 180, 250, 0.3);
-            border-left: 2px dashed var(--primary);
-            border-right: 2px dashed var(--primary);
-            transition: all 0.3s ease;
+            background: var(--rod-active);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.3), 0 0 10px rgba(255,183,77,0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .blade {
             position: absolute;
-            top: -25px;
-            width: 2px;
-            height: 55px;
-            background: var(--danger);
-            box-shadow: 0 0 8px var(--danger);
+            top: -30px;
+            width: 3px;
+            height: 66px;
+            background: #ff1744;
+            box-shadow: 0 0 12px #ff1744;
             z-index: 10;
-            transition: left 0.3s ease;
+            transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
         .blade::after {
-            content: '▼ Blade (k)';
+            content: '✂ CUT (k)';
             position: absolute;
             top: -18px;
             transform: translateX(-50%);
-            font-size: 0.75rem;
-            color: var(--danger);
+            font-size: 11px;
+            color: #ff1744;
             font-weight: bold;
             white-space: nowrap;
+            background: rgba(18,18,18,0.8);
+            padding: 1px 4px;
+            border-radius: 3px;
         }
         .rod-marker {
             position: absolute;
-            top: 35px;
+            top: 44px;
             transform: translateX(-50%);
-            font-size: 0.8rem;
+            font-size: 12px;
             font-family: monospace;
             text-align: center;
+            white-space: nowrap;
         }
         .rod-marker::before {
-            content: '▲';
+            content: '';
             display: block;
-            font-size: 0.6rem;
-            color: #585b70;
-            margin-bottom: 2px;
+            width: 2px;
+            height: 8px;
+            background: #555;
+            margin: 0 auto 6px auto;
         }
+        .rod-marker.is-cut::before { background: var(--secondary); height: 12px; }
         .rod-marker.is-cut { color: var(--secondary); font-weight: bold; }
+        .rod-marker.is-boundary::before { background: var(--primary); height: 12px; }
         .rod-marker.is-boundary { color: var(--primary); }
+        .idx-label { color: #888; font-size: 10px; display: block; margin-top: 2px; }
 
-        /* Mapping helper element */
-        .mapping-bar {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            background: #11111b;
-            padding: 10px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 0.9rem;
-            margin-top: 40px;
-            border-left: 4px solid var(--secondary);
-        }
-
-        /* Split layout for Grid and Live Stats */
-        .main-layout {
+        /* Dashboard Split Layout */
+        .dashboard-grid {
             display: grid;
-            grid-template-columns: 1fr 380px;
-            gap: 20px;
+            grid-template-columns: 1fr 340px;
+            gap: 25px;
+        }
+        @media (max-width: 850px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
         }
 
-        @media (max-width: 900px) {
-            .main-layout { grid-template-columns: 1fr; }
-        }
-
-        /* Matrix Table Styling */
-        .table-wrapper {
+        /* DP Table Matrix */
+        .matrix-scroll {
             overflow-x: auto;
             display: flex;
             justify-content: center;
-            align-items: center;
+            padding: 10px 0;
         }
-        table {
-            border-collapse: collapse;
-            font-family: monospace;
-            font-size: 0.85rem;
-        }
+        table { border-collapse: collapse; font-family: monospace; }
         td, th {
-            width: 45px;
-            height: 45px;
+            width: 46px;
+            height: 46px;
             text-align: center;
-            border: 1px solid #313244;
-            position: relative;
+            border: 1px solid #2d2d2d;
+            font-size: 13px;
         }
-        th { background-color: #11111b; color: #a6adc8; }
-        td { background-color: #181825; cursor: pointer; transition: all 0.15s; }
-        td:hover { filter: brightness(1.3); }
+        th { background-color: #161616; color: #888; font-weight: normal; }
+        td { background-color: #1a1a1a; cursor: pointer; transition: all 0.2s; color: #555; }
+        td:hover { background-color: #252525; color: #fff; }
         
-        /* DP Cells States */
-        td.cell-active { background-color: rgba(137, 180, 250, 0.4); border: 2px solid var(--primary); }
-        td.cell-left-sub { background-color: rgba(166, 227, 161, 0.3); border: 1px solid var(--accent); }
-        td.cell-right-sub { background-color: rgba(245, 194, 231, 0.3); border: 1px solid var(--secondary); }
+        /* Grid Highlight States */
+        td.cell-active { background-color: rgba(0, 188, 212, 0.25); border: 2px solid var(--primary); color: #fff; }
+        td.cell-left-sub { background-color: rgba(76, 175, 80, 0.2); border: 1px solid var(--accent); color: #fff; }
+        td.cell-right-sub { background-color: rgba(233, 30, 99, 0.2); border: 1px solid var(--secondary); color: #fff; }
         td.cell-computed { color: var(--accent); font-weight: bold; }
-        td.cell-base-case { color: #585b70; background-color: #11111b; }
+        td.cell-base-case { color: #666; background-color: #151515; }
 
-        /* Live Tracker / Status panel */
-        .stats-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        .stat-box {
-            background: #11111b;
-            padding: 12px;
+        /* Monitor Analytics Panel */
+        .analytics-column { display: flex; flex-direction: column; gap: 20px; }
+        .status-card {
+            background: #161616;
+            border: 1px solid var(--border-color);
             border-radius: 6px;
-            font-size: 0.9rem;
+            padding: 16px;
         }
-        .stat-box h3 { margin-top: 0; margin-bottom: 8px; font-size: 0.85rem; color: #89b4fa; text-transform: uppercase; letter-spacing: 0.05em;}
-        .math-expr { font-family: monospace; font-size: 0.95rem; line-height: 1.4; }
-        
-        .legend {
+        .status-card h3 { margin: 0 0 10px 0; font-size: 12px; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; }
+        .state-vars { font-family: monospace; font-size: 14px; line-height: 1.6; }
+        .formula-log { font-family: monospace; font-size: 13px; line-height: 1.5; color: #ccc; }
+
+        .legend-row {
             display: flex;
             flex-wrap: wrap;
-            gap: 10px;
-            font-size: 0.8rem;
+            gap: 12px;
+            font-size: 12px;
+            color: #aaa;
             margin-top: auto;
+            padding-top: 10px;
         }
-        .legend-item { display: flex; align-items: center; gap: 5px; }
-        .legend-color { width: 12px; height: 12px; border-radius: 3px; }
+        .legend-box { display: flex; align-items: center; gap: 6px; }
+        .color-dot { width: 10px; height: 10px; border-radius: 2px; }
     </style>
 </head>
 <body>
 
-    <h1>Stick Cutting DP Sandbox</h1>
-    <p class="subtitle">Visualizing the bridge between array indices and physical rod segments</p>
+<div class="container">
+    <header>
+        <h1>Stick Cutting DP Interface</h1>
+        <p>A structural look into dividing localized intervals inside bounded stick coordinate frames</p>
+    </header>
 
-    <div class="container">
-        
-        <div class="panel controls-row">
-            <div>
-                <label>Stick Length (n): </label>
-                <input type="text" id="inputN" value="7" style="width: 40px; text-align: center;">
+    <div class="panel">
+        <div class="rod-wrapper">
+            <div class="blade" id="visualBlade" style="display: none;"></div>
+            <div class="rod-base">
+                <div class="rod-active-segment" id="activeSegment" style="display: none;"></div>
             </div>
-            <div>
-                <label>Cuts array: </label>
-                <input type="text" id="inputCuts" value="1, 3, 4, 5" style="width: 150px;">
-            </div>
-            <button id="btnInit" onclick="initializeSimulation()">Build Sandbox</button>
-            <div style="border-left: 1px solid #45475a; height: 25px; margin: 0 5px;"></div>
-            <button id="btnStep" onclick="stepForward()" class="btn-secondary">▶ Single Step</button>
-            <button id="btnAuto" onclick="toggleAutoPlay()" class="btn-secondary">🔄 Auto Play</button>
-            <button id="btnReset" onclick="resetSimulation()" class="btn-secondary">Reset</button>
-        </div>
-
-        <div class="panel">
-            <h3 style="margin-top: 0; color: var(--primary);">Physical Rod Map</h3>
-            <div class="rod-container">
-                <div class="blade" id="visualBlade" style="display: none;"></div>
-                <div class="rod-base" id="rodBase">
-                    <div class="rod-active-segment" id="activeSegment" style="display: none;"></div>
-                </div>
-                <div id="rodMarkers"></div>
-            </div>
-
-            <div class="mapping-bar" id="mappingDisplay">
-                Configure inputs and press "Build Sandbox" to begin tracking indices.
-            </div>
-        </div>
-
-        <div class="main-layout">
-            <div class="panel table-wrapper">
-                <div id="matrixContainer"></div>
-            </div>
-
-            <div class="panel stats-panel">
-                <div class="stat-box">
-                    <h3>Loop Variables Status</h3>
-                    <div id="varStatus">Click "Single Step" or click any table cell to inspect state variables.</div>
-                </div>
-                <div class="stat-box" style="border-left: 4px solid var(--highlight);">
-                    <h3>Live Formula Tracker</h3>
-                    <div id="formulaStatus" class="math-expr">Awaiting simulation step...</div>
-                </div>
-
-                <div class="legend">
-                    <div class="legend-item"><div class="legend-color" style="background: rgba(137, 180, 250, 0.4); border: 1px solid var(--primary);"></div> Current dp[i][j]</div>
-                    <div class="legend-item"><div class="legend-color" style="background: rgba(166, 227, 161, 0.3); border: 1px solid var(--accent);"></div> Left dp[i][k]</div>
-                    <div class="legend-item"><div class="legend-color" style="background: rgba(245, 194, 231, 0.3); border: 1px solid var(--secondary);"></div> Right dp[k][j]</div>
-                </div>
-            </div>
+            <div id="rodMarkers"></div>
         </div>
     </div>
 
-    <script>
-        // State management
-        let n = 7;
-        let cuts = [0, 1, 3, 4, 5, 7]; // Automatically injected with boundaries and sorted
-        let m = 6; // cuts.size()
-        let dp = [];
-        let steps = [];
-        let currentStepIdx = -1;
-        let isPlaying = false;
-        let intervalId = null;
+    <div class="panel controls-row">
+        <div class="input-group">
+            <label>Length (n):</label>
+            <input type="text" id="inputN" value="7" style="width: 35px; text-align: center;">
+        </div>
+        <div class="input-group">
+            <label>Cuts Configuration:</label>
+            <input type="text" id="inputCuts" value="1, 3, 4, 5" style="width: 140px;">
+        </div>
+        <button id="btnInit" onclick="initializeSimulation()">Build System</button>
+        <div style="border-left: 1px solid var(--border-color); height: 20px; margin: 0 5px;"></div>
+        <button id="btnStep" onclick="stepForward()" class="btn-secondary">▶ Step</button>
+        <button id="btnAuto" onclick="toggleAutoPlay()" class="btn-secondary">🔄 Auto Play</button>
+        <button id="btnReset" onclick="resetSimulation()" class="btn-secondary">Reset</button>
+    </div>
 
-        function initializeSimulation() {
-            // Read UI entries
-            n = parseInt(document.getElementById('inputN').value) || 7;
-            let rawCuts = document.getElementById('inputCuts').value
-                .split(',')
-                .map(x => parseInt(x.trim()))
-                .filter(x => !isNaN(x) && x > 0 && x < n);
-            
-            // Inject boundaries and enforce sort
-            cuts = [0, ...new Set(rawCuts), n].sort((a,b) => a - b);
-            m = cuts.length;
+    <div class="dashboard-grid">
+        <div class="panel matrix-scroll">
+            <div id="matrixContainer"></div>
+        </div>
 
-            // Reconstruct empty DP Table
-            dp = Array(m).fill(0).map(() => Array(m).fill(0));
-            
-            // Build the execution queue timeline
-            generateStepsTimeline();
-            
-            // Render UI containers
-            renderPhysicalRodMarkers();
-            renderTableStructure();
-            
-            currentStepIdx = -1;
-            isPlaying = false;
-            if(intervalId) clearInterval(intervalId);
-            document.getElementById('btnAuto').innerText = "🔄 Auto Play";
-            
-            updateUIState();
-            document.getElementById('formulaStatus').innerHTML = "Sandbox ready. Click <b>Single Step</b> to start loop iterations.";
-            document.getElementById('varStatus').innerText = "Loop hasn't started yet.";
-            document.getElementById('mappingDisplay').innerHTML = `<b>Sorted Cuts Array Map:</b> ` + cuts.map((val, idx) => `[Index ${idx} → Position ${val}]`).join(' | ');
-        }
+        <div class="analytics-column">
+            <div class="status-card">
+                <h3>State Variables</h3>
+                <div id="varStatus" class="state-vars">Click Step to start the matrix scan sequence.</div>
+            </div>
+            <div class="status-card" style="border-left: 3px solid var(--highlight);">
+                <h3>Evaluation Math Log</h3>
+                <div id="formulaStatus" class="formula-log">Awaiting build parameters...</div>
+            </div>
 
-        function generateStepsTimeline() {
-            steps = [];
-            let simulatedDp = Array(m).fill(0).map(() => Array(m).fill(0));
+            <div class="legend-row">
+                <div class="legend-box"><div class="color-dot" style="background: rgba(0, 188, 212, 0.3); border: 1px solid var(--primary);"></div> Active dp[i][j]</div>
+                <div class="legend-box"><div class="color-dot" style="background: rgba(76, 175, 80, 0.25); border: 1px solid var(--accent);"></div> Left dp[i][k]</div>
+                <div class="legend-box"><div class="color-dot" style="background: rgba(233, 30, 99, 0.25); border: 1px solid var(--secondary);"></div> Right dp[k][j]</div>
+            </div>
+        </div>
+    </div>
+</div>
 
-            // Initialize structural 0 baseline loops
-            for(let len = 2; len <= m; len++) {
-                for(let i = 0; i <= m - len; i++) {
-                    let j = i + len - 1;
+<script>
+    let n = 7;
+    let cuts = [0, 1, 3, 4, 5, 7];
+    let m = 6;
+    let dp = [];
+    let steps = [];
+    let currentStepIdx = -1;
+    let isPlaying = false;
+    let intervalId = null;
+
+    function initializeSimulation() {
+        n = parseInt(document.getElementById('inputN').value) || 7;
+        let rawCuts = document.getElementById('inputCuts').value
+            .split(',')
+            .map(x => parseInt(x.trim()))
+            .filter(x => !isNaN(x) && x > 0 && x < n);
+        
+        cuts = [0, ...new Set(rawCuts), n].sort((a,b) => a - b);
+        m = cuts.length;
+        dp = Array(m).fill(0).map(() => Array(m).fill(0));
+        
+        generateStepsTimeline();
+        renderPhysicalRodMarkers();
+        renderTableStructure();
+        
+        currentStepIdx = -1;
+        isPlaying = false;
+        if(intervalId) clearInterval(intervalId);
+        document.getElementById('btnAuto').innerText = "🔄 Auto Play";
+        
+        updateUIState();
+        document.getElementById('formulaStatus').innerHTML = "System initialized. Click <b>Step</b> to populate base cases.";
+        document.getElementById('varStatus').innerText = "System Idle.";
+    }
+
+    function generateStepsTimeline() {
+        steps = [];
+        let simulatedDp = Array(m).fill(0).map(() => Array(m).fill(0));
+
+        for(let len = 2; len <= m; len++) {
+            for(let i = 0; i <= m - len; i++) {
+                let j = i + len - 1;
+                
+                if (j === i + 1) {
+                    simulatedDp[i][j] = 0;
+                    steps.push({ type: 'base', i, j, k: null, cost: 0, currentMin: 0 });
+                    continue;
+                }
+
+                let minCostForCell = Infinity;
+                steps.push({ type: 'cell-start', i, j, k: null, cost: null, currentMin: Infinity });
+
+                for(let k = i + 1; k < j; k++) {
+                    let cost = simulatedDp[i][k] + simulatedDp[k][j] + (cuts[j] - cuts[i]);
+                    minCostForCell = Math.min(minCostForCell, cost);
                     
-                    if (j === i + 1) {
-                        simulatedDp[i][j] = 0;
-                        steps.push({ type: 'base', i, j, k: null, cost: 0, currentMin: 0, msg: `Base case segment: No internal cuts possible.` });
-                        continue;
-                    }
-
-                    let minCostForCell = Infinity;
-                    steps.push({ type: 'cell-start', i, j, k: null, cost: null, currentMin: Infinity, msg: `Evaluating optimal cuts for range indices.` });
-
-                    for(let k = i + 1; k < j; k++) {
-                        let cost = simulatedDp[i][k] + simulatedDp[k][j] + (cuts[j] - cuts[i]);
-                        let evaluatedMin = Math.min(minCostForCell, cost);
-                        minCostForCell = evaluatedMin;
-                        
-                        steps.push({
-                            type: 'k-evaluate',
-                            i, j, k,
-                            leftCost: simulatedDp[i][k],
-                            rightCost: simulatedDp[k][j],
-                            segmentLen: (cuts[j] - cuts[i]),
-                            cost,
-                            currentMin: minCostForCell,
-                            msg: `Testing a split cut at strategy index k=${k}.`
-                        });
-                    }
-                    simulatedDp[i][j] = minCostForCell;
-                    steps.push({ type: 'cell-finish', i, j, k: null, cost: minCostForCell, currentMin: minCostForCell, msg: `Optimal sequence saved for index interval.` });
+                    steps.push({
+                        type: 'k-evaluate',
+                        i, j, k,
+                        leftCost: simulatedDp[i][k],
+                        rightCost: simulatedDp[k][j],
+                        segmentLen: (cuts[j] - cuts[i]),
+                        cost,
+                        currentMin: minCostForCell
+                    });
                 }
+                simulatedDp[i][j] = minCostForCell;
+                steps.push({ type: 'cell-finish', i, j, k: null, cost: minCostForCell, currentMin: minCostForCell });
             }
         }
+    }
 
-        function renderPhysicalRodMarkers() {
-            const container = document.getElementById('rodMarkers');
-            container.innerHTML = '';
-            cuts.forEach((val, idx) => {
-                const pct = (val / n) * 100;
-                const marker = document.createElement('div');
-                marker.className = `rod-marker ${val===0 || val===n ? 'is-boundary' : 'is-cut'}`;
-                marker.style.left = `${pct}%`;
-                marker.innerHTML = `<div>pos: ${val}</div><div style="font-weight:bold; color:#f9e2af;">idx: ${idx}</div>`;
-                container.appendChild(marker);
-            });
-            // Hide active tools initially
-            document.getElementById('activeSegment').style.display = 'none';
-            document.getElementById('visualBlade').style.display = 'none';
-        }
+    function renderPhysicalRodMarkers() {
+        const container = document.getElementById('rodMarkers');
+        container.innerHTML = '';
+        cuts.forEach((val, idx) => {
+            const pct = (val / n) * 100;
+            const marker = document.createElement('div');
+            marker.className = `rod-marker ${val===0 || val===n ? 'is-boundary' : 'is-cut'}`;
+            marker.style.left = `${pct}%`;
+            marker.innerHTML = `<div>pos: <b>${val}</b></div><span class="idx-label">idx: ${idx}</span>`;
+            container.appendChild(marker);
+        });
+        document.getElementById('activeSegment').style.display = 'none';
+        document.getElementById('visualBlade').style.display = 'none';
+    }
 
-        function renderTableStructure() {
-            const container = document.getElementById('matrixContainer');
-            let html = `<table><tr><th>i \\ j</th>`;
-            for(let j=0; j<m; j++) html += `<th>${j}</th>`;
+    function renderTableStructure() {
+        const container = document.getElementById('matrixContainer');
+        let html = `<table><tr><th>i \\ j</th>`;
+        for(let j=0; j<m; j++) html += `<th>${j}</th>`;
+        html += `</tr>`;
+        
+        for(let i=0; i<m; i++) {
+            html += `<tr><th>${i}</th>`;
+            for(let j=0; j<m; j++) {
+                html += `<td id="cell-${i}-${j}" onclick="handleCellClick(${i},${j})">-</td>`;
+            }
             html += `</tr>`;
-            
-            for(let i=0; i<m; i++) {
-                html += `<tr><th>${i}</th>`;
-                for(let j=0; j<m; j++) {
-                    html += `<td id="cell-${i}-${j}" onclick="handleCellClick(${i},${j})">-</td>`;
-                }
-                html += `</tr>`;
-            }
-            html += `</table>`;
-            container.innerHTML = html;
         }
+        html += `</table>`;
+        container.innerHTML = html;
+    }
 
-        function stepForward() {
-            if(currentStepIdx >= steps.length - 1) {
-                if(isPlaying) toggleAutoPlay();
-                alert("Simulation Complete!");
-                return;
-            }
-            currentStepIdx++;
-            applyStep(steps[currentStepIdx]);
+    function stepForward() {
+        if(currentStepIdx >= steps.length - 1) {
+            if(isPlaying) toggleAutoPlay();
+            alert("DP Matrix fully evaluated!");
+            return;
         }
+        currentStepIdx++;
+        applyStep(steps[currentStepIdx]);
+    }
 
-        function applyStep(step) {
-            const { type, i, j, k, currentMin } = step;
-            
-            // Reset all cell styles back to normal values state
-            document.querySelectorAll('td').forEach(el => el.className = '');
-            for(let r=0; r<m; r++) {
-                for(let c=0; c<m; c++) {
-                    let cell = document.getElementById(`cell-${r}-${c}`);
-                    if(dp[r][c] !== null && dp[r][c] !== undefined && cell.innerText !== '-') {
-                        cell.classList.add('cell-computed');
-                    }
+    function applyStep(step) {
+        const { type, i, j, k, currentMin } = step;
+        
+        document.querySelectorAll('td').forEach(el => el.className = '');
+        for(let r=0; r<m; r++) {
+            for(let c=0; c<m; c++) {
+                let cell = document.getElementById(`cell-${r}-${c}`);
+                if(dp[r][c] !== null && dp[r][c] !== undefined && cell.innerText !== '-') {
+                    cell.classList.add('cell-computed');
                 }
             }
+        }
 
-            // Highlight target DP boundaries
-            document.getElementById(`cell-${i}-${j}`).classList.add('cell-active');
+        document.getElementById(`cell-${i}-${j}`).classList.add('cell-active');
+        
+        const segLeftPct = (cuts[i] / n) * 100;
+        const segRightPct = (cuts[j] / n) * 100;
+        const activeSeg = document.getElementById('activeSegment');
+        activeSeg.style.left = `${segLeftPct}%`;
+        activeSeg.style.width = `${segRightPct - segLeftPct}%`;
+        activeSeg.style.display = 'block';
+
+        document.getElementById('varStatus').innerHTML = `
+            <b>i (left idx)</b>  = ${i} <span style="color:var(--primary)">(pos: ${cuts[i]})</span><br>
+            <b>j (right idx)</b> = ${j} <span style="color:var(--primary)">(pos: ${cuts[j]})</span><br>
+            <b>k (cut idx)</b>   = ${k !== null ? k : 'None'} ${k !== null ? `<span style="color:var(--secondary)">(pos: ${cuts[k]})</span>` : ''}
+        `;
+
+        if(type === 'base') {
+            dp[i][j] = 0;
+            document.getElementById(`cell-${i}-${j}`).innerText = 0;
+            document.getElementById(`cell-${i}-${j}`).classList.add('cell-base-case');
+            document.getElementById('visualBlade').style.display = 'none';
+            document.getElementById('formulaStatus').innerHTML = `Adjacent coordinates indices detected.<br>No cuts can be dropped between position <b>${cuts[i]}</b> and <b>${cuts[j]}</b>.<br><b>dp[${i}][${j}] = 0</b>`;
+        } 
+        else if (type === 'cell-start') {
+            document.getElementById(`cell-${i}-${j}`).innerText = '?';
+            document.getElementById('visualBlade').style.display = 'none';
+            document.getElementById('formulaStatus').innerHTML = `Scanning minimum internal combinations for segment [pos ${cuts[i]} to ${cuts[j]}]...`;
+        }
+        else if(type === 'k-evaluate') {
+            document.getElementById(`cell-${i}-${k}`).classList.add('cell-left-sub');
+            document.getElementById(`cell-${k}-${j}`).classList.add('cell-right-sub');
             
-            // Manage Physical Stick Segment Highlight
-            const segLeftPct = (cuts[i] / n) * 100;
-            const segRightPct = (cuts[j] / n) * 100;
-            const activeSeg = document.getElementById('activeSegment');
-            activeSeg.style.left = `${segLeftPct}%`;
-            activeSeg.style.width = `${segRightPct - segLeftPct}%`;
-            activeSeg.style.display = 'block';
+            const bladePct = (cuts[k] / n) * 100;
+            const bladeEl = document.getElementById('visualBlade');
+            bladeEl.style.left = `${bladePct}%`;
+            bladeEl.style.display = 'block';
 
-            // Variable Inspector Box
-            document.getElementById('varStatus').innerHTML = `
-                <b>i</b> = ${i} <span style="color:#89b4fa">(pos: ${cuts[i]})</span><br>
-                <b>j</b> = ${j} <span style="color:#89b4fa">(pos: ${cuts[j]})</span><br>
-                <b>k</b> = ${k !== null ? k : 'N/A'} ${k !== null ? `<span style="color:#f38ba8">(pos: ${cuts[k]})</span>` : ''}
+            document.getElementById('formulaStatus').innerHTML = `
+                Cost = dp[${i}][${k}] + dp[${k}][${j}] + (cuts[${j}] - cuts[${i}])<br>
+                Cost = <span style="color:var(--accent)">${step.leftCost}</span> + 
+                       <span style="color:var(--secondary)">${step.rightCost}</span> + 
+                       <span style="color:var(--highlight)">${step.segmentLen} (len)</span><br>
+                Total evaluated split cost = <b>${step.cost}</b><br><br>
+                <span style="color:var(--primary)">Current Local Min dp[${i}][${j}] = ${currentMin}</span>
             `;
-
-            // Bridge mapping feedback
-            document.getElementById('mappingDisplay').innerHTML = `
-                Focusing on <b>dp[${i}][${j}]</b>: This maps to the physical rod piece from position <b>${cuts[i]}</b> to <b>${cuts[j]}</b> (Length: ${cuts[j] - cuts[i]}).
-            `;
-
-            if(type === 'base') {
-                dp[i][j] = 0;
-                document.getElementById(`cell-${i}-${j}`).innerText = 0;
-                document.getElementById(`cell-${i}-${j}`).classList.add('cell-base-case');
-                document.getElementById('visualBlade').style.display = 'none';
-                document.getElementById('formulaStatus').innerHTML = `Length between indices is 1 (Adjacent positions). No cuts can be placed inside.<br><b>dp[${i}][${j}] = 0</b>`;
-            } 
-            else if (type === 'cell-start') {
-                document.getElementById(`cell-${i}-${j}`).innerText = '?';
-                document.getElementById('visualBlade').style.display = 'none';
-                document.getElementById('formulaStatus').innerHTML = `Finding minimum cost split inside segment range...`;
-            }
-            else if(type === 'k-evaluate') {
-                document.getElementById(`cell-${i}-${k}`).classList.add('cell-left-sub');
-                document.getElementById(`cell-${k}-${j}`).classList.add('cell-right-sub');
-                
-                // Position blade on physical stick sandbox view
-                const bladePct = (cuts[k] / n) * 100;
-                const bladeEl = document.getElementById('visualBlade');
-                bladeEl.style.left = `${bladePct}%`;
-                bladeEl.style.display = 'block';
-
-                document.getElementById('formulaStatus').innerHTML = `
-                    <b>Cost Calculation at cut index k=${k}:</b><br>
-                    Cost = dp[i][k] + dp[k][j] + (cuts[j] - cuts[i])<br>
-                    Cost = <span style="color:#a6e3a1">${step.leftCost} (dp[${i}][${k}])</span> + 
-                           <span style="color:#f5c2e7">${step.rightCost} (dp[${k}][${j}])</span> + 
-                           <span style="color:#f9e2af">${step.segmentLen} (len: ${cuts[j]}-${cuts[i]})</span><br>
-                    Cost = <b>${step.cost}</b><br>
-                    <span style="color:#89b4fa">Running Min for cell dp[${i}][${j}] = ${currentMin}</span>
-                `;
-            }
-            else if(type === 'cell-finish') {
-                dp[i][j] = step.cost;
-                document.getElementById(`cell-${i}-${j}`).innerText = step.cost;
-                document.getElementById(`cell-${i}-${j}`).classList.add('cell-computed');
-                document.getElementById('visualBlade').style.display = 'none';
-                document.getElementById('formulaStatus').innerHTML = `All internal cuts tested! Minimum total cost for index interval [${i} to ${j}] is <b>${step.cost}</b>.`;
-            }
         }
-
-        function handleCellClick(i, j) {
-            if (j <= i) {
-                alert("Invalid configuration context. Matrix cell is out of lookup range rules.");
-                return;
-            }
-            // Search execution log list to find final answer summary frame
-            let foundStep = steps.filter(s => s.i === i && s.j === j && s.type === 'cell-finish')[0] || 
-                            steps.filter(s => s.i === i && s.j === j && s.type === 'base')[0];
-            
-            if(foundStep) {
-                if(isPlaying) toggleAutoPlay();
-                applyStep(foundStep);
-                
-                // Show static dependencies breakdown if it's an evaluated compound state cell
-                if(foundStep.type === 'cell-finish') {
-                    document.getElementById('formulaStatus').innerHTML += `<br><br>💡 <i>Clicking cells directly shows their final minimized result. Use "Single Step" to watch the loop slice sequentially.</i>`;
-                }
-            } else {
-                alert("This cell state hasn't been computed yet in the loop hierarchy timeline sequence order.");
-            }
+        else if(type === 'cell-finish') {
+            dp[i][j] = step.cost;
+            document.getElementById(`cell-${i}-${j}`).innerText = step.cost;
+            document.getElementById(`cell-${i}-${j}`).classList.add('cell-computed');
+            document.getElementById('visualBlade').style.display = 'none';
+            document.getElementById('formulaStatus').innerHTML = `Saved structural optimization target for segment range!<br><b>dp[${i}][${j}] = ${step.cost}</b>`;
         }
+    }
 
-        function toggleAutoPlay() {
-            isPlaying = !isPlaying;
-            const btn = document.getElementById('btnAuto');
-            if(isPlaying) {
-                btn.innerText = "⏸ Pause";
-                intervalId = setInterval(stepForward, 1200);
-            } else {
-                btn.innerText = "🔄 Auto Play";
-                clearInterval(intervalId);
-            }
+    function handleCellClick(i, j) {
+        if (j <= i) return;
+        let foundStep = steps.filter(s => s.i === i && s.j === j && s.type === 'cell-finish')[0] || 
+                        steps.filter(s => s.i === i && s.j === j && s.type === 'base')[0];
+        
+        if(foundStep) {
+            if(isPlaying) toggleAutoPlay();
+            applyStep(foundStep);
         }
+    }
 
-        function resetSimulation() {
-            initializeSimulation();
+    function toggleAutoPlay() {
+        isPlaying = !isPlaying;
+        const btn = document.getElementById('btnAuto');
+        if(isPlaying) {
+            btn.innerText = "⏸ Pause";
+            intervalId = setInterval(stepForward, 1000);
+        } else {
+            btn.innerText = "🔄 Auto Play";
+            clearInterval(intervalId);
         }
+    }
 
-        function updateUIState() {
-            // Empties output text states visually
-            document.querySelectorAll('td').forEach(el => {
-                let idParts = el.id.split('-');
-                let r = parseInt(idParts[1]);
-                let c = parseInt(idParts[2]);
-                if (c <= r) el.innerText = '0';
-                else el.innerText = '-';
-            });
-        }
+    function resetSimulation() {
+        initializeSimulation();
+    }
 
-        // Auto load defaults instantly on system initial frame load
-        window.onload = initializeSimulation;
-    </script>
+    function updateUIState() {
+        document.querySelectorAll('td').forEach(el => {
+            let idParts = el.id.split('-');
+            let r = parseInt(idParts[1]);
+            let c = parseInt(idParts[2]);
+            if (c <= r) el.innerText = '0';
+            else el.innerText = '-';
+        });
+    }
+
+    window.onload = initializeSimulation;
+</script>
 </body>
 </html>
