@@ -191,7 +191,7 @@
                         leftDep: {r: i, c: k},
                         rightDep: {r: k+1, c: j},
                         dpSnapshot: JSON.parse(JSON.stringify(dpState)),
-                        msg: `[SPLIT EVALUATION] Partitioning range at k = ${k}\nLeft side: dp[${i}][${k}] (${leftVal} ops)\nRight side: dp[${k+1}][${j}] (${rightVal} ops)\nMerge Cost: ${nums[i-1]} &times; ${nums[k]} &times; ${nums[j]} = ${nums[i-1] * nums[k] * nums[j]} ops\nTotal calculated for this k split = ${cost}`
+                        msg: `[SPLIT EVALUATION] Partitioning range at k = ${k}\nLeft side: dp[${i}][${k}] (${leftVal} ops)\nRight side: dp[${k+1}][${j}] (${rightVal} ops)\nMerge Cost: ${nums[i-1]} x ${nums[k]} x ${nums[j]} = ${nums[i-1] * nums[k] * nums[j]} ops\nTotal calculated for this k split = ${cost}`
                     });
                 }
                 
