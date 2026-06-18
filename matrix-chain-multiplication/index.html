@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MCM DP Visualizer</title>
+    <title>MCM Visualizer (4 Matrices)</title>
     <style>
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -13,15 +13,15 @@
             margin: 0;
         }
         .container {
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
         }
-        h1 { text-align: center; color: #38bdf8; margin-bottom: 10px; }
+        h1 { text-align: center; color: #00bcd4; margin-bottom: 5px; }
+        .subtitle { text-align: center; color: #94a3b8; margin-bottom: 25px; font-size: 15px; }
         .grid-layout {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: 1.1fr 0.9fr;
             gap: 30px;
-            margin-top: 20px;
         }
         .panel {
             background: #1e293b;
@@ -34,71 +34,91 @@
             display: flex;
             justify-content: center;
             gap: 15px;
-            margin-bottom: 20px;
+            margin-bottom: 25px;
         }
         button {
-            background-color: #0284c7;
-            color: white;
+            background-color: #00bcd4;
+            color: #121212;
             border: none;
-            padding: 10px 20px;
-            font-size: 16px;
+            padding: 12px 24px;
+            font-size: 15px;
+            font-weight: bold;
             border-radius: 6px;
             cursor: pointer;
             transition: background 0.2s;
         }
-        button:hover { background-color: #0369a1; }
-        button:disabled { background-color: #475569; cursor: not-allowed; }
+        button:hover { background-color: #008ba3; }
+        button:disabled { background-color: #475569; color: #94a3b8; cursor: not-allowed; }
         
-        /* Table Styles */
+        /* Table Geometry */
         table {
             border-collapse: collapse;
-            margin: 20px auto;
+            margin: 15px auto;
             background: #0f172a;
+            width: 100%;
         }
         td, th {
             border: 1px solid #334155;
-            width: 70px;
-            height: 50px;
+            height: 55px;
             text-align: center;
             font-size: 14px;
         }
-        th { background-color: #1e293b; color: #94a3b8; }
-        .diagonal { background-color: #1e293b; color: #64748b; }
-        .active-cell { background-color: #0284c7 !important; color: white; font-weight: bold; animation: pulse 1s infinite alternate; }
-        .dep-left { background-color: #b91c1c; color: white; }
-        .dep-right { background-color: #15803d; color: white; }
+        th { background-color: #1e293b; color: #94a3b8; font-weight: 600; }
+        .diagonal { background-color: #1e293b; color: #475569; font-style: italic; }
+        .unused { background-color: #111827; color: #374151; }
         
-        /* Trace Animation Styles */
+        /* State Colors */
+        .active-cell { background-color: #0284c7 !important; color: white; font-weight: bold; box-shadow: inset 0 0 12px rgba(255,255,255,0.2); }
+        .dep-left { background-color: #991b1b; color: #fca5a5; font-weight: bold; }
+        .dep-right { background-color: #166534; color: #bbf7d0; font-weight: bold; }
+        
+        /* Chain / Wedge Output */
         .chain-display {
             display: flex;
             justify-content: center;
-            gap: 10px;
-            font-size: 20px;
-            margin: 20px 0;
+            align-items: center;
+            gap: 8px;
+            font-size: 22px;
+            margin: 25px 0;
             font-weight: bold;
+            background: #0f172a;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px dashed #475569;
         }
         .matrix-box {
             background: #334155;
-            padding: 5px 15px;
-            border-radius: 4px;
+            padding: 8px 18px;
+            border-radius: 6px;
             border: 2px solid transparent;
+            color: #cbd5e1;
+            transition: all 0.2s;
         }
-        .matrix-box.active { border-color: #38bdf8; background: #0369a1; }
-        .wedge { color: #ef4444; font-size: 24px; animation: bounce 0.5s infinite alternate; }
+        .matrix-box.active { border-color: #00bcd4; background: #004e5a; color: #fff; }
+        .wedge { 
+            color: #ef4444; 
+            font-size: 28px; 
+            font-weight: 900;
+            padding: 0 5px;
+            animation: flash 0.4s infinite alternate; 
+        }
         
         .status-msg {
             background: #0f172a;
             padding: 15px;
             border-radius: 6px;
-            min-height: 80px;
-            font-family: monospace;
-            border-left: 4px solid #38bdf8;
+            min-height: 110px;
+            font-family: 'Courier New', Courier, monospace;
+            border-left: 4px solid #00bcd4;
             color: #cbd5e1;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-line;
         }
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0px rgba(2, 132, 199, 0.7); }
-            100% { box-shadow: 0 0 0 8px rgba(2, 132, 199, 0); }
+        @keyframes flash {
+            0% { opacity: 0.3; transform: scale(0.95); }
+            100% { opacity: 1; transform: scale(1.1); }
         }
     </style>
 </head>
@@ -106,40 +126,45 @@
 
 <div class="container">
     <h1>Matrix Chain Multiplication Visualizer</h1>
-    <p style="text-align: center; color: #94a3b8;">Visualizing Dimensions: <b>[10, 20, 30, 40]</b> &rarr; 3 Matrices: A₁(10x20), A₂(20x30), A₃(30x40)</p>
+    <div class="subtitle">Array: <b>[10, 20, 30, 40, 50]</b> &rarr; 4 Matrices: A₁(10x20), A₂(20x30), A₃(30x40), A₄(40x50)</div>
     
     <div class="controls">
-        <button id="btn-next" onclick="nextStep()">Next Step &rarr;</button>
-        <button id="btn-reset" onclick="resetSim()" style="background-color: #475569;">Reset</button>
+        <button id="btn-next" onclick="nextStep()">Next Interval Step &rarr;</button>
+        <button id="btn-reset" onclick="resetSim()" style="background-color: #475569; color: white;">Reset State</button>
     </div>
 
     <div class="grid-layout">
         <div class="panel">
-            <h3>Dynamic Programming Table (dp[i][j])</h3>
-            <p style="font-size: 13px; color: #94a3b8;">Rows represent starting matrix index (i). Columns represent ending matrix index (j).</p>
+            <h3>DP Interval Matrix Table (dp[i][j])</h3>
             <div id="table-container"></div>
+            <div style="margin-top: 15px; display: flex; gap: 20px; font-size: 13px;">
+                <div style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#0284c7;"></div> Evaluating Target</div>
+                <div style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#991b1b;"></div> Left Subchain (dp[i][k])</div>
+                <div style="display:flex; align-items:center; gap:5px;"><div style="width:15px; height:15px; background:#166534;"></div> Right Subchain (dp[k+1][j])</div>
+            </div>
         </div>
 
         <div class="panel">
-            <h3>Current Execution Architecture</h3>
+            <h3>Active Chain Partition</h3>
             <div class="chain-display" id="chain-container"></div>
-            <h4>Operation Log:</h4>
-            <div class="status-msg" id="log-container">Click "Next Step" to start tracking loop variables...</div>
+            <h4>Loop Boundary Metrics:</h4>
+            <div class="status-msg" id="log-container">Initialize visualizer by clicking "Next Interval Step".</div>
         </div>
     </div>
 </div>
 
 <script>
-    const nums = [10, 20, 30, 40];
+    const nums = [10, 20, 30, 40, 50];
     const n = nums.length;
     let steps = [];
     let currentStepIdx = -1;
 
-    // 1. Generate all execution states mimicking the 3 nested loops
     function generateSteps() {
-        // Initialize an empty layout table state representation
+        // Base setup matching vector configuration
         let dpState = Array(n).fill(0).map(() => Array(n).fill('INF'));
-        for(let i=0; i<n; i++) dpState[i][i] = 0;
+        
+        // Base cases: single matrix evaluation costs 0 operations
+        for(let i = 1; i < n; i++) dpState[i][i] = 0;
 
         for (let len = 2; len < n; len++) {
             for (let i = 1; i < n - len + 1; i++) {
@@ -149,16 +174,15 @@
                     type: 'INIT_CELL',
                     i: i, j: j, len: len,
                     dpSnapshot: JSON.parse(JSON.stringify(dpState)),
-                    msg: `Evaluating sub-chain of length ${len}: Matrices A${i} through A${j}.\nInitializing dp[${i}][${j}] = INT_MAX.`
+                    msg: `[LOOP CHECK] Chain Length (len) = ${len}\nStarting Index (i) = ${i} &rarr; Ending Index (j) = ${j}\nInitializing target cell dp[${i}][${j}] = INT_MAX.`
                 });
 
                 let minCost = Infinity;
                 for (let k = i; k < j; k++) {
-                    // Cost computation matching formula
-                    let cost = (dpState[i][k] === 'INF' ? 0 : dpState[i][k]) + 
-                               (dpState[k+1][j] === 'INF' ? 0 : dpState[k+1][j]) + 
-                               (nums[i-1] * nums[k] * nums[j]);
+                    let leftVal = dpState[i][k];
+                    let rightVal = dpState[k+1][j];
                     
+                    let cost = leftVal + rightVal + (nums[i-1] * nums[k] * nums[j]);
                     if(cost < minCost) minCost = cost;
 
                     steps.push({
@@ -167,7 +191,7 @@
                         leftDep: {r: i, c: k},
                         rightDep: {r: k+1, c: j},
                         dpSnapshot: JSON.parse(JSON.stringify(dpState)),
-                        msg: `Testing split point k = ${k}.\nFormula: dp[${i}][${k}] (${dpState[i][k]}) + dp[${k+1}][${j}] (${dpState[k+1][j]}) + (${nums[i-1]} * ${nums[k]} * ${nums[j]})\nCalculated Split Cost = ${cost}`
+                        msg: `[SPLIT EVALUATION] Partitioning range at k = ${k}\nLeft side: dp[${i}][${k}] (${leftVal} ops)\nRight side: dp[${k+1}][${j}] (${rightVal} ops)\nMerge Cost: ${nums[i-1]} &times; ${nums[k]} &times; ${nums[j]} = ${nums[i-1] * nums[k] * nums[j]} ops\nTotal calculated for this k split = ${cost}`
                     });
                 }
                 
@@ -176,7 +200,7 @@
                     type: 'FINALIZE_CELL',
                     i: i, j: j, len: len, val: minCost,
                     dpSnapshot: JSON.parse(JSON.stringify(dpState)),
-                    msg: `Completed checking all split partitions for range [${i}][${j}].\nOptimal minimum cost found = ${minCost}.`
+                    msg: `[STATE FINALIZED] Completed scanning k partitions for range [${i}][${j}].\nSelected minimum structural option = ${minCost}.\nCell dp[${i}][${j}] is locked.`
                 });
             }
         }
@@ -192,9 +216,21 @@
             html += `<tr><th>i=${i}</th>`;
             for(let j=0; j<n; j++) {
                 let cellClass = '';
-                let val = step ? step.dpSnapshot[i][j] : (i === j ? 0 : 'INF');
+                let val = '0';
                 
-                if (i === j) cellClass = 'diagonal';
+                if (i === 0 || j === 0) {
+                    cellClass = 'unused';
+                    val = '-';
+                } else if (i > j) {
+                    cellClass = 'unused';
+                    val = '-';
+                } else if (i === j) {
+                    cellClass = 'diagonal';
+                    val = '0';
+                } else {
+                    val = step ? step.dpSnapshot[i][j] : 'INF';
+                }
+                
                 if (step && step.i === i && step.j === j) cellClass = 'active-cell';
                 if (step && step.type === 'COMPUTE_K') {
                     if(step.leftDep.r === i && step.leftDep.c === j) cellClass = 'dep-left';
@@ -212,7 +248,7 @@
     function renderChain(step) {
         let container = document.getElementById('chain-container');
         if (!step) {
-            container.innerHTML = `<div class="matrix-box">A₁</div><div class="matrix-box">A₂</div><div class="matrix-box">A₃</div>`;
+            container.innerHTML = `<div class="matrix-box">A₁</div><div class="matrix-box">A₂</div><div class="matrix-box">A₃</div><div class="matrix-box">A₄</div>`;
             return;
         }
 
@@ -236,14 +272,14 @@
             document.getElementById('log-container').innerText = step.msg;
         } else {
             document.getElementById('btn-next').disabled = true;
-            document.getElementById('log-container').innerText = "Simulation Completed! Final optimal value located safely inside dp[1][n-1].";
+            document.getElementById('log-container').innerText = "Simulation Terminated!\nGlobal optimal execution layout stored at tracking target index dp[1][4].";
         }
     }
 
     function resetSim() {
         currentStepIdx = -1;
         document.getElementById('btn-next').disabled = false;
-        document.getElementById('log-container').innerText = 'Click "Next Step" to start tracking loop variables...';
+        document.getElementById('log-container').innerText = 'Initialize visualizer by clicking "Next Interval Step".';
         renderTable(null);
         renderChain(null);
     }
