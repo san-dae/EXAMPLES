@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Trapping Rain Water: Dual Visualization</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h1 { color: #f5c2e7; margin-bottom: 10px; }
+        .container {
+            display: flex;
+            gap: 40px;
+            max-width: 1200px;
+            width: 100%;
+            justify-content: center;
+            margin-top: 20px;
+        }
+        .panel {
+            background-color: #313244;
+            border-radius: 12px;
+            padding: 20px;
+            width: 45%;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { color: #89b4fa; margin-top: 0; }
+        .grid-container {
+            position: relative;
+            margin: 20px 0;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 30px);
+            grid-template-rows: repeat(5, 30px);
+            gap: 2px;
+            background-color: #45475a;
+            padding: 5px;
+            border-radius: 6px;
+        }
+        .cell {
+            width: 30px;
+            height: 30px;
+            background-color: #181825;
+            border-radius: 3px;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #585b70;
+        }
+        .cell.building { background-color: #b4befe; color: #11111b; font-weight: bold; }
+        .cell.water { background-color: #74c7ec; animation: splash 0.3s ease; }
+        .cell.current-col { border: 2px solid #f9e2af; box-sizing: border-box; }
+        .cell.left-mark { border: 2px solid #a6e3a1; box-sizing: border-box; }
+        .cell.right-mark { border: 2px solid #f38ba8; box-sizing: border-box; }
+        
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            background-color: #11111b;
+            color: #cdd6f4;
+            border: 1px solid #cdd6f4;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        button:hover { background-color: #a6e3a1; color: #11111b; }
+        .variables {
+            background-color: #181825;
+            padding: 15px;
+            border-radius: 8px;
+            width: 100%;
+            box-sizing: border-box;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        .var-line { margin: 5px 0; }
+        .highlight-text { color: #f9e2af; font-weight: bold; }
+        
+        @keyframes splash {
+            0% { transform: scale(0.8); background-color: #89b4fa; }
+            100% { transform: scale(1); background-color: #74c7ec; }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Water Trapping Visualizer</h1>
+    <p>Array: [4, 1, 0, 2, 1, 3] &nbsp;|&nbsp; Max Height: 4</p>
+    
+    <div class="controls">
+        <button onclick="resetAll()">🔄 Restart Simulation</button>
+        <button onclick="stepAll()" style="border-color: #a6e3a1; color: #a6e3a1;">➡️ Step Forward</button>
+    </div>
+
+    <div class="container">
+        <div class="panel">
+            <h2>1. Stack Approach (Layer-by-Layer)</h2>
+            <div class="grid-container">
+                <div class="grid" id="stack-grid"></div>
+            </div>
+            <div class="variables" id="stack-vars">
+                <div class="var-line">Loop Index (<span class="highlight-text">i</span>): -</div>
+                <div class="var-line">Stack Content: []</div>
+                <div class="var-line">Valley (Floor): -</div>
+                <div class="var-line">Left Wall: -</div>
+                <div class="var-line">Water Added: -</div>
+                <div class="var-line" style="color: #a6e3a1; font-size: 16px; margin-top: 10px;">Total Ans: <span id="stack-total">0</span></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>2. Pref/Suff Approach (Column-by-Column)</h2>
+            <div class="grid-container">
+                <div class="grid" id="vector-grid"></div>
+            </div>
+            <div class="variables" id="vector-vars">
+                <div class="var-line">Loop Index (<span class="highlight-text">i</span>): -</div>
+                <div class="var-line">LeftMax Array: [4, 4, 4, 4, 4, 4]</div>
+                <div class="var-line">RightMax Array: [4, 3, 3, 3, 3, 3]</div>
+                <div class="var-line">Current Building H: -</div>
+                <div class="var-line">Water Added: min(LM, RM) - H = -</div>
+                <div class="var-line" style="color: #a6e3a1; font-size: 16px; margin-top: 10px;">Total Ans: <span id="vector-total">0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const height = [4, 1, 0, 2, 1, 3];
+        const n = height.length;
+        const maxH = 4;
+
+        // Prefix arrays pre-calculated for display
+        const leftMax = [4, 4, 4, 4, 4, 4];
+        const rightMax = [4, 3, 3, 3, 3, 3];
+
+        let stackState = { i: 0, st: [], total: 0, insideWhile: false, currValley: null, currLeft: null, stepIndex: 0 };
+        let vectorState = { i: 0, total: 0 };
+
+        // Generate Grids
+        function createGrid(gridId) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = '';
+            grid.style.gridTemplateColumns = `repeat(${n}, 40px)`;
+            grid.style.gridTemplateRows = `repeat(${maxH + 1}, 40px)`;
+
+            for (let row = maxH; row >= 0; row--) {
+                for (let col = 0; col < n; col++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `${gridId}-${row}-${col}`;
+                    
+                    if (row < height[col]) {
+                        cell.classList.add('building');
+                    }
+                    grid.appendChild(cell);
+                }
+            }
+        }
+
+        function resetAll() {
+            stackState = { i: 0, st: [], total: 0, insideWhile: false, currValley: null, currLeft: null };
+            vectorState = { i: 0, total: 0 };
+            createGrid('stack-grid');
+            createGrid('vector-grid');
+            document.getElementById('stack-total').innerText = '0';
+            document.getElementById('vector-total').innerText = '0';
+            updateStackUI("-", "[]", "-", "-", "-");
+            updateVectorUI("-", "-", "-");
+        }
+
+        function updateStackUI(i, stStr, valley, left, added) {
+            document.getElementById('stack-vars').innerHTML = `
+                <div class="var-line">Loop Index (<span class="highlight-text">i = ${i}</span>) [Value: ${height[i] !== undefined ? height[i] : '-'}]</div>
+                <div class="var-line">Stack Content (Indices): <span style="color: #f5c2e7">${stStr}</span></div>
+                <div class="var-line">Valley Index (Floor): <span style="color: #f9e2af">${valley}</span></div>
+                <div class="var-line">Left Wall Index: <span style="color: #a6e3a1">${left}</span></div>
+                <div class="var-line">Water Layer Added: ${added}</div>
+                <div class="var-line" style="color: #a6e3a1; font-size: 16px; margin-top: 10px;">Total Ans: <span>${stackState.total}</span></div>
+            `;
+        }
+
+        function updateVectorUI(i, hVal, added) {
+            document.getElementById('vector-vars').innerHTML = `
+                <div class="var-line">Loop Index (<span class="highlight-text">i = ${i}</span>)</div>
+                <div class="var-line">LeftMax Array: [4, 4, 4, 4, 4, 4] -> <span style="color:#a6e3a1">LM[${i}]: ${leftMax[i]||'-'}</span></div>
+                <div class="var-line">RightMax Array: [4, 3, 3, 3, 3, 3] -> <span style="color:#f38ba8">RM[${i}]: ${rightMax[i]||'-'}</span></div>
+                <div class="var-line">Current Building Height: ${hVal}</div>
+                <div class="var-line">Water Columns Added: ${added}</div>
+                <div class="var-line" style="color: #a6e3a1; font-size: 16px; margin-top: 10px;">Total Ans: <span>${vectorState.total}</span></div>
+            `;
+        }
+
+        function stepStack() {
+            if (stackState.i >= n) return;
+            let i = stackState.i;
+
+            // Clear previous diagnostic borders
+            document.querySelectorAll('#stack-grid .cell').forEach(c => c.classList.remove('current-col', 'left-mark', 'right-mark'));
+
+            // Highlight right wall
+            for(let r=0; r<=maxH; r++) document.getElementById(`stack-grid-${r}-${i}`)?.classList.add('right-mark');
+
+            if (stackState.st.length > 0 && height[stackState.st[stackState.st.length - 1]] < height[i]) {
+                // Inside the bottleneck loop!
+                let valley = stackState.st.pop();
+                
+                if (stackState.st.length === 0) {
+                    updateStackUI(i, `[${stackState.st.join(', ')}]`, valley, "No Left Wall!", "0 (Spilled!)");
+                    stackState.st.push(i);
+                    stackState.i++;
+                    return;
+                }
+
+                let left = stackState.st[stackState.st.length - 1];
+                
+                // Visual highlights for variables
+                for(let r=0; r<=maxH; r++) document.getElementById(`stack-grid-${r}-${left}`)?.classList.add('left-mark');
+                for(let r=0; r<=maxH; r++) document.getElementById(`stack-grid-${r}-${valley}`)?.classList.add('current-col');
+
+                let length = Math.min(height[left], height[i]) - height[valley];
+                let width = i - left - 1;
+                let waterAdded = length * width;
+                stackState.total += waterAdded;
+
+                // Color the horizontal blocks dynamically
+                if (waterAdded > 0) {
+                    for (let col = left + 1; col < i; col++) {
+                        for (let row = height[valley]; row < Math.min(height[left], height[i]); row++) {
+                            document.getElementById(`stack-grid-${row}-${col}`).classList.add('water');
+                        }
+                    }
+                }
+
+                updateStackUI(i, `[${stackState.st.join(', ')}]`, valley, left, `${length} H × ${width} W = +${waterAdded}`);
+            } else {
+                // Moving along steps down
+                stackState.st.push(i);
+                updateStackUI(i, `[${stackState.st.join(', ')}]`, "-", "-", "0 (Walking down)");
+                stackState.i++;
+            }
+        }
+
+        function stepVector() {
+            if (vectorState.i >= n) return;
+            let i = vectorState.i;
+
+            // Reset current column border indicators
+            document.querySelectorAll('#vector-grid .cell').forEach(c => c.classList.remove('current-col'));
+            for(let r=0; r<=maxH; r++) document.getElementById(`vector-grid-${r}-${i}`).classList.add('current-col');
+
+            let maxWaterLevel = Math.min(leftMax[i], rightMax[i]);
+            let waterAdded = maxWaterLevel - height[i];
+            
+            if (waterAdded > 0) {
+                vectorState.total += waterAdded;
+                // Color the column boxes from top of the building to max level
+                for (let row = height[i]; row < maxWaterLevel; row++) {
+                    document.getElementById(`vector-grid-${row}-${i}`).classList.add('water');
+                }
+                updateVectorUI(i, height[i], `min(${leftMax[i]}, ${rightMax[i]}) - ${height[i]} = +${waterAdded}`);
+            } else {
+                updateVectorUI(i, height[i], `min(${leftMax[i]}, ${rightMax[i]}) - ${height[i]} = 0`);
+            }
+
+            vectorState.i++;
+        }
+
+        function stepAll() {
+            stepStack();
+            stepVector();
+        }
+
+        // Initialize display
+        resetAll();
+    </script>
+</body>
+</html>
