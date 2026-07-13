@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Linked List Reversal Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        h2 { color: #2c3e50; margin-bottom: 5px; }
+        .controls {
+            margin: 20px 0;
+            display: flex;
+            gap: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #3498db;
+            color: white;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        #reset-btn { background-color: #e74c3c; }
+        #reset-btn:hover { background-color: #c0392b; }
+
+        /* Container for the Linked List */
+        .list-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 250px;
+            width: 100%;
+            max-width: 1000px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            overflow-x: auto;
+        }
+
+        .node-wrapper {
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Node Styling */
+        .node {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #2ecc71;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 18px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: all 0.4s ease;
+            position: relative;
+            border: 3px solid transparent;
+        }
+        
+        .node .val-text { margin-top: 5px; }
+
+        /* Variable Pointer Labels (curr, prev, next) */
+        .pointer-labels {
+            position: absolute;
+            bottom: -75px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            width: 90px;
+            text-align: center;
+        }
+
+        .label {
+            font-size: 12px;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-weight: bold;
+            color: white;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+        }
+        .label.prev { background-color: #e67e22; }
+        .label.curr { background-color: #9b59b6; }
+        .label.next_node { background-color: #34495e; }
+        .label.active { opacity: 1; transform: translateY(0); }
+
+        /* Arrow Styling */
+        .arrow {
+            width: 60px;
+            height: 4px;
+            background-color: #34495e;
+            position: relative;
+            margin: 0 15px;
+            transition: transform 0.6s ease, background-color 0.4s;
+        }
+        .arrow::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: -6px;
+            border: 8px solid transparent;
+            border-left: 10px solid #34495e;
+            transition: border-color 0.4s;
+        }
+
+        /* Class to flip arrow direction leftward */
+        .arrow.reversed {
+            transform: rotate(180deg);
+            background-color: #e74c3c;
+        }
+        .arrow.reversed::after {
+            border-left-color: #e74c3c;
+        }
+
+        /* Code Highlight Box */
+        .code-box {
+            margin-top: 25px;
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            width: 100%;
+            max-width: 600px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .code-line { padding: 2px 5px; border-radius: 3px; transition: background 0.2s; }
+        .code-line.highlight { background-color: rgba(241, 196, 15, 0.4); color: #f1c40f; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+    <h2>Iterative Linked List Reversal</h2>
+    <p style="color: #7f8c8d; margin-top: 0;">Watch how the arrows invert and pointers shift stage-by-stage!</p>
+
+    <div class="controls">
+        <button id="step-btn">Next Step ➔</button>
+        <button id="reset-btn">Reset</button>
+    </div>
+
+    <div class="list-container" id="list-container">
+        </div>
+
+    <div class="code-box">
+        <div class="code-line" id="line-1">ListNode* prev = nullptr;</div>
+        <div class="code-line" id="line-2">ListNode* curr = head;</div>
+        <div class="code-line" id="line-3">while (curr != nullptr) {</div>
+        <div class="code-line" id="line-4">&nbsp;&nbsp;&nbsp;&nbsp;ListNode* next_node = curr->next;</div>
+        <div class="code-line" id="line-5">&nbsp;&nbsp;&nbsp;&nbsp;curr->next = prev;</div>
+        <div class="code-line" id="line-6">&nbsp;&nbsp;&nbsp;&nbsp;prev = curr;</div>
+        <div class="code-line" id="line-7">&nbsp;&nbsp;&nbsp;&nbsp;curr = next_node;</div>
+        <div class="code-line" id="line-8">}</div>
+    </div>
+
+    <script>
+        const initialValues = [1, 2, 3, 4, 5];
+        let state = {
+            prev: -1,       // Index tracking positions
+            curr: 0,
+            next_node: -1,
+            step: 0,        // Code execution step
+            arrowsReversed: [false, false, false, false]
+        };
+
+        const container = document.getElementById('list-container');
+        const stepBtn = document.getElementById('step-btn');
+        const resetBtn = document.getElementById('reset-btn');
+
+        function renderList() {
+            container.innerHTML = '';
+            initialValues.forEach((val, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'node-wrapper';
+
+                // Create Node
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.innerHTML = `<span class="val-text">${val}</span>`;
+
+                // Set up pointer label tracks
+                const labelTrack = document.createElement('div');
+                labelTrack.className = 'pointer-labels';
+                
+                const pLabel = document.createElement('div'); pLabel.className = 'label prev'; pLabel.innerText = 'prev';
+                const cLabel = document.createElement('div'); cLabel.className = 'label curr'; cLabel.innerText = 'curr';
+                const nLabel = document.createElement('div'); nLabel.className = 'label next_node'; nLabel.innerText = 'next';
+
+                if (state.prev === index) pLabel.classList.add('active');
+                if (state.curr === index) cLabel.classList.add('active');
+                if (state.next_node === index) nLabel.classList.add('active');
+
+                labelTrack.appendChild(pLabel);
+                labelTrack.appendChild(cLabel);
+                labelTrack.appendChild(nLabel);
+                node.appendChild(labelTrack);
+                wrapper.appendChild(node);
+
+                // Add Arrow if not the last node
+                if (index < initialValues.length - 1) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'arrow';
+                    if (state.arrowsReversed[index]) {
+                        arrow.classList.add('reversed');
+                    }
+                    wrapper.appendChild(arrow);
+                }
+
+                container.appendChild(wrapper);
+            });
+        }
+
+        function highlightLine(lineId) {
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight'));
+            if(lineId) document.getElementById(lineId).classList.add('highlight');
+        }
+
+        function runNextStep() {
+            // Initial setup steps
+            if (state.step === 0) {
+                state.prev = -1;
+                highlightLine('line-1');
+                state.step = 1;
+                renderList();
+                return;
+            }
+            if (state.step === 1) {
+                state.curr = 0;
+                highlightLine('line-2');
+                state.step = 2;
+                renderList();
+                return;
+            }
+
+            // Loop checking
+            if (state.step === 2) {
+                if (state.curr === null || state.curr >= initialValues.length) {
+                    highlightLine('line-8');
+                    stepBtn.disabled = true;
+                    stepBtn.innerText = "Done!";
+                    return;
+                }
+                highlightLine('line-3');
+                state.step = 3;
+                return;
+            }
+
+            // Inside Loop Actions
+            if (state.step === 3) {
+                // next_node = curr->next
+                state.next_node = (state.curr + 1 < initialValues.length) ? state.curr + 1 : null;
+                highlightLine('line-4');
+                state.step = 4;
+                renderList();
+                return;
+            }
+            if (state.step === 4) {
+                // curr->next = prev (FLIP ARROW)
+                if (state.curr >= 0 && state.curr < initialValues.length - 1) {
+                    state.arrowsReversed[state.curr] = true;
+                }
+                highlightLine('line-5');
+                state.step = 5;
+                renderList();
+                return;
+            }
+            if (state.step === 5) {
+                // prev = curr
+                state.prev = state.curr;
+                highlightLine('line-6');
+                state.step = 6;
+                renderList();
+                return;
+            }
+            if (state.step === 6) {
+                // curr = next_node
+                state.curr = state.next_node;
+                highlightLine('line-7');
+                state.step = 2; // Loop back up to evaluate while condition
+                renderList();
+                return;
+            }
+        }
+
+        function reset() {
+            state = {
+                prev: -1,
+                curr: 0,
+                next_node: -1,
+                step: 0,
+                arrowsReversed: [false, false, false, false]
+            };
+            stepBtn.disabled = false;
+            stepBtn.innerText = "Next Step ➔";
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight'));
+            renderList();
+        }
+
+        stepBtn.addEventListener('click', runNextStep);
+        resetBtn.addEventListener('click', reset);
+
+        // Intial Init
+        renderList();
+    </script>
+</body>
+</html>
