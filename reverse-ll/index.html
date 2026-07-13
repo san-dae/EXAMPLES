@@ -14,12 +14,37 @@
             align-items: center;
         }
         h2 { color: #2c3e50; margin-bottom: 5px; }
+        
+        /* Tabs for switching methods */
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .tab-btn {
+            padding: 10px 20px;
+            font-size: 15px;
+            cursor: pointer;
+            border: 1px solid #bdc3c7;
+            background-color: #e0e0e0;
+            border-radius: 5px 5px 0 0;
+            font-weight: bold;
+            color: #7f8c8d;
+            transition: all 0.2s;
+        }
+        .tab-btn.active {
+            background-color: #ffffff;
+            color: #2c3e50;
+            border-bottom: 2px solid #ffffff;
+            transform: translateY(1px);
+        }
+
         .controls {
             margin: 20px 0;
             display: flex;
             gap: 10px;
         }
-        button {
+        button.action-btn {
             padding: 10px 20px;
             font-size: 16px;
             font-weight: bold;
@@ -30,8 +55,8 @@
             color: white;
             transition: background 0.2s;
         }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        button.action-btn:hover { background-color: #2980b9; }
+        button.action-btn:disabled { background-color: #bdc3c7; cursor: not-allowed; }
         #reset-btn { background-color: #e74c3c; }
         #reset-btn:hover { background-color: #c0392b; }
 
@@ -42,12 +67,13 @@
             justify-content: center;
             min-height: 250px;
             width: 100%;
-            max-width: 1000px;
+            max-width: 1100px;
             background: white;
-            border-radius: 8px;
+            border-radius: 0 0 8px 8px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            padding: 20px;
+            padding: 30px 20px;
             overflow-x: auto;
+            border-top: 1px solid #e0e0e0;
         }
 
         .node-wrapper {
@@ -72,27 +98,33 @@
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
             transition: all 0.4s ease;
             position: relative;
-            border: 3px solid transparent;
         }
         
-        .node .val-text { margin-top: 5px; }
+        /* Nullptr Node Block */
+        .node.null-node {
+            background-color: #7f8c8d;
+            border-radius: 6px;
+            width: 85px;
+            height: 50px;
+            font-size: 14px;
+        }
 
-        /* Variable Pointer Labels (curr, prev, next) */
+        /* Variable Pointer Labels (curr, prev, next_node) */
         .pointer-labels {
             position: absolute;
-            bottom: -75px;
+            bottom: -85px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             flex-direction: column;
             gap: 4px;
-            width: 90px;
+            width: 95px;
             text-align: center;
         }
 
         .label {
-            font-size: 12px;
-            padding: 2px 6px;
+            font-size: 11px;
+            padding: 2px 4px;
             border-radius: 3px;
             font-weight: bold;
             color: white;
@@ -103,15 +135,17 @@
         .label.prev { background-color: #e67e22; }
         .label.curr { background-color: #9b59b6; }
         .label.next_node { background-color: #34495e; }
+        .label.head { background-color: #e74c3c; }
+        .label.newHead { background-color: #16a085; }
         .label.active { opacity: 1; transform: translateY(0); }
 
         /* Arrow Styling */
         .arrow {
-            width: 60px;
+            width: 50px;
             height: 4px;
             background-color: #34495e;
             position: relative;
-            margin: 0 15px;
+            margin: 0 10px;
             transition: transform 0.6s ease, background-color 0.4s;
         }
         .arrow::after {
@@ -132,6 +166,11 @@
         .arrow.reversed::after {
             border-left-color: #e74c3c;
         }
+        
+        /* Hidden Arrow when connection breaks */
+        .arrow.broken {
+            opacity: 0.1;
+        }
 
         /* Code Highlight Box */
         .code-box {
@@ -141,163 +180,223 @@
             padding: 15px;
             border-radius: 5px;
             width: 100%;
-            max-width: 600px;
+            max-width: 650px;
             font-family: 'Courier New', Courier, monospace;
             font-size: 14px;
             line-height: 1.5;
+            display: none;
         }
-        .code-line { padding: 2px 5px; border-radius: 3px; transition: background 0.2s; }
+        .code-box.active { display: block; }
+        .code-line { padding: 2px 5px; border-radius: 3px; transition: background 0.2s; white-space: pre; }
         .code-line.highlight { background-color: rgba(241, 196, 15, 0.4); color: #f1c40f; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <h2>Iterative Linked List Reversal</h2>
-    <p style="color: #7f8c8d; margin-top: 0;">Watch how the arrows invert and pointers shift stage-by-stage!</p>
+    <h2>Linked List Reversal Visualizer</h2>
+    <p style="color: #7f8c8d; margin-top: 0;">Step through the exact pointer adjustments, including the terminal nullptr pointers.</p>
 
-    <div class="controls">
-        <button id="step-btn">Next Step ➔</button>
-        <button id="reset-btn">Reset</button>
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchMethod('iterative')">Iterative Method</button>
+        <button class="tab-btn" onclick="switchMethod('recursive')">Recursive Method</button>
     </div>
 
     <div class="list-container" id="list-container">
         </div>
 
-    <div class="code-box">
-        <div class="code-line" id="line-1">ListNode* prev = nullptr;</div>
-        <div class="code-line" id="line-2">ListNode* curr = head;</div>
-        <div class="code-line" id="line-3">while (curr != nullptr) {</div>
-        <div class="code-line" id="line-4">&nbsp;&nbsp;&nbsp;&nbsp;ListNode* next_node = curr->next;</div>
-        <div class="code-line" id="line-5">&nbsp;&nbsp;&nbsp;&nbsp;curr->next = prev;</div>
-        <div class="code-line" id="line-6">&nbsp;&nbsp;&nbsp;&nbsp;prev = curr;</div>
-        <div class="code-line" id="line-7">&nbsp;&nbsp;&nbsp;&nbsp;curr = next_node;</div>
-        <div class="code-line" id="line-8">}</div>
+    <div class="controls">
+        <button id="step-btn" class="action-btn">Next Step ➔</button>
+        <button id="reset-btn" class="action-btn">Reset</button>
+    </div>
+
+    <div class="code-box active" id="code-iterative">
+        <div class="code-line" id="i-1">ListNode* prev = nullptr;</div>
+        <div class="code-line" id="i-2">ListNode* curr = head;</div>
+        <div class="code-line" id="i-3">while (curr != nullptr) {</div>
+        <div class="code-line" id="i-4">    ListNode* next_node = curr->next;</div>
+        <div class="code-line" id="i-5">    curr->next = prev;</div>
+        <div class="code-line" id="i-6">    prev = curr;</div>
+        <div class="code-line" id="i-7">    curr = next_node;</div>
+        <div class="code-line" id="i-8">}</div>
+        <div class="code-line" id="i-9">return prev;</div>
+    </div>
+
+    <div class="code-box" id="code-recursive">
+        <div class="code-line" id="r-1">if (head == nullptr || head->next == nullptr) return head;</div>
+        <div class="code-line" id="r-2">ListNode* newHead = reverseList(head->next);</div>
+        <div class="code-line" id="r-3">head->next->next = head;</div>
+        <div class="code-line" id="r-4">head->next = nullptr;</div>
+        <div class="code-line" id="r-5">return newHead;</div>
     </div>
 
     <script>
-        const initialValues = [1, 2, 3, 4, 5];
+        let currentMethod = 'iterative';
+        const nodeValues = [1, 2, 3, 4];
+        
         let state = {
-            prev: -1,       // Index tracking positions
-            curr: 0,
-            next_node: -1,
-            step: 0,        // Code execution step
-            arrowsReversed: [false, false, false, false]
+            step: 0,
+            // Iterative tracking
+            prev: -1, curr: 0, next_node: -1,
+            // Recursive tracking simulating call stack steps
+            head: 0, newHead: -1,
+            arrows: [false, false, false, false], // false = forward, true = backward, null = broken
+            nullPointerTarget: 'right' // tracking where the main list trail ends
         };
 
         const container = document.getElementById('list-container');
         const stepBtn = document.getElementById('step-btn');
-        const resetBtn = document.getElementById('reset-btn');
+
+        function switchMethod(method) {
+            currentMethod = method;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.code-box').forEach(box => box.classList.remove('active'));
+            
+            if(method === 'iterative') {
+                document.querySelectorAll('.tab-btn')[0].classList.add('active');
+                document.getElementById('code-iterative').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab-btn')[1].classList.add('active');
+                document.getElementById('code-recursive').classList.add('active');
+            }
+            reset();
+        }
 
         function renderList() {
             container.innerHTML = '';
-            initialValues.forEach((val, index) => {
+            
+            // Render a left nullptr if the structure shifts backward
+            if (state.nullPointerTarget === 'left') {
+                container.appendChild(createNullNode('nullptr (left)'));
+                container.appendChild(createArrow(true)); 
+            }
+
+            nodeValues.forEach((val, index) => {
                 const wrapper = document.createElement('div');
                 wrapper.className = 'node-wrapper';
 
-                // Create Node
                 const node = document.createElement('div');
                 node.className = 'node';
-                node.innerHTML = `<span class="val-text">${val}</span>`;
+                node.innerHTML = `<span>${val}</span>`;
 
-                // Set up pointer label tracks
                 const labelTrack = document.createElement('div');
                 labelTrack.className = 'pointer-labels';
                 
-                const pLabel = document.createElement('div'); pLabel.className = 'label prev'; pLabel.innerText = 'prev';
-                const cLabel = document.createElement('div'); cLabel.className = 'label curr'; cLabel.innerText = 'curr';
-                const nLabel = document.createElement('div'); nLabel.className = 'label next_node'; nLabel.innerText = 'next';
+                // Labels setup
+                if (currentMethod === 'iterative') {
+                    const p = document.createElement('div'); p.className = 'label prev'; p.innerText = 'prev';
+                    const c = document.createElement('div'); c.className = 'label curr'; c.innerText = 'curr';
+                    const n = document.createElement('div'); n.className = 'label next_node'; n.innerText = 'next_node';
+                    if (state.prev === index) p.classList.add('active');
+                    if (state.curr === index) c.classList.add('active');
+                    if (state.next_node === index) n.classList.add('active');
+                    labelTrack.append(p, c, n);
+                } else {
+                    const h = document.createElement('div'); h.className = 'label head'; h.innerText = 'head';
+                    const nh = document.createElement('div'); nh.className = 'label newHead'; nh.innerText = 'newHead';
+                    if (state.head === index) h.classList.add('active');
+                    if (state.newHead === index) nh.classList.add('active');
+                    labelTrack.append(h, nh);
+                }
 
-                if (state.prev === index) pLabel.classList.add('active');
-                if (state.curr === index) cLabel.classList.add('active');
-                if (state.next_node === index) nLabel.classList.add('active');
-
-                labelTrack.appendChild(pLabel);
-                labelTrack.appendChild(cLabel);
-                labelTrack.appendChild(nLabel);
                 node.appendChild(labelTrack);
                 wrapper.appendChild(node);
 
-                // Add Arrow if not the last node
-                if (index < initialValues.length - 1) {
-                    const arrow = document.createElement('div');
-                    arrow.className = 'arrow';
-                    if (state.arrowsReversed[index]) {
-                        arrow.classList.add('reversed');
+                if (index < nodeValues.length - 1) {
+                    const arrowStatus = state.arrows[index];
+                    if (arrowStatus !== 'broken') {
+                        const arrow = createArrow(arrowStatus);
+                        wrapper.appendChild(arrow);
                     }
-                    wrapper.appendChild(arrow);
                 }
-
                 container.appendChild(wrapper);
             });
+
+            // Right side tail nullptr
+            if (state.nullPointerTarget === 'right') {
+                container.appendChild(createArrow(false));
+                container.appendChild(createNullNode('nullptr'));
+            }
         }
 
-        function highlightLine(lineId) {
+        function createNullNode(text) {
+            const nullNode = document.createElement('div');
+            nullNode.className = 'node null-node';
+            nullNode.innerText = text;
+            return nullNode;
+        }
+
+        function createArrow(isReversed) {
+            const arrow = document.createElement('div');
+            arrow.className = 'arrow';
+            if (isReversed) arrow.classList.add('reversed');
+            return arrow;
+        }
+
+        function highlightLine(id) {
             document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight'));
-            if(lineId) document.getElementById(lineId).classList.add('highlight');
+            if(id) document.getElementById(id).classList.add('highlight');
         }
 
-        function runNextStep() {
-            // Initial setup steps
-            if (state.step === 0) {
-                state.prev = -1;
-                highlightLine('line-1');
-                state.step = 1;
-                renderList();
-                return;
-            }
-            if (state.step === 1) {
-                state.curr = 0;
-                highlightLine('line-2');
-                state.step = 2;
-                renderList();
-                return;
-            }
-
-            // Loop checking
+        function runIterativeStep() {
+            if (state.step === 0) { highlightLine('i-1'); state.prev = null; state.step = 1; renderList(); return; }
+            if (state.step === 1) { highlightLine('i-2'); state.curr = 0; state.step = 2; renderList(); return; }
             if (state.step === 2) {
-                if (state.curr === null || state.curr >= initialValues.length) {
-                    highlightLine('line-8');
-                    stepBtn.disabled = true;
-                    stepBtn.innerText = "Done!";
-                    return;
+                if (state.curr === null || state.curr >= nodeValues.length) {
+                    highlightLine('i-9'); stepBtn.disabled = true; stepBtn.innerText = "Done!"; return;
                 }
-                highlightLine('line-3');
+                highlightLine('i-3'); state.step = 3; return;
+            }
+            if (state.step === 3) {
+                state.next_node = (state.curr + 1 < nodeValues.length) ? state.curr + 1 : null;
+                highlightLine('i-4'); state.step = 4; renderList(); return;
+            }
+            if (state.step === 4) {
+                if (state.curr === 0) state.nullPointerTarget = 'left'; 
+                if (state.curr < nodeValues.length - 1) state.arrows[state.curr] = true;
+                highlightLine('i-5'); state.step = 5; renderList(); return;
+            }
+            if (state.step === 5) { state.prev = state.curr; highlightLine('i-6'); state.step = 6; renderList(); return; }
+            if (state.step === 6) { state.curr = state.next_node; highlightLine('i-7'); state.step = 2; renderList(); return; }
+        }
+
+        // Simulating the base-case return stack visually
+        function runRecursiveStep() {
+            // Forward phase down to the end of the stack
+            if (state.step === 0) { highlightLine('r-1'); state.step = 1; return; }
+            if (state.step === 1) { 
+                highlightLine('r-2'); 
+                if(state.head < nodeValues.length - 1) {
+                    state.head++; // Diving down the call stack
+                    renderList();
+                } else {
+                    state.newHead = state.head; // Base case reached at node 4
+                    state.step = 2;
+                }
+                return; 
+            }
+            // Unwinding stack phase (reversing links from back to front)
+            if (state.step === 2) {
+                highlightLine('r-3');
+                if(state.head > 0) state.arrows[state.head - 1] = true; // Invert pointer
                 state.step = 3;
+                renderList();
                 return;
             }
-
-            // Inside Loop Actions
             if (state.step === 3) {
-                // next_node = curr->next
-                state.next_node = (state.curr + 1 < initialValues.length) ? state.curr + 1 : null;
-                highlightLine('line-4');
+                highlightLine('r-4');
+                if (state.head === 1) state.nullPointerTarget = 'left';
                 state.step = 4;
-                renderList();
                 return;
             }
             if (state.step === 4) {
-                // curr->next = prev (FLIP ARROW)
-                if (state.curr >= 0 && state.curr < initialValues.length - 1) {
-                    state.arrowsReversed[state.curr] = true;
+                highlightLine('r-5');
+                if (state.head > 0) {
+                    state.head--; // Pop the stack frame frame back up
+                    state.step = 2;
+                } else {
+                    stepBtn.disabled = true;
+                    stepBtn.innerText = "Done!";
                 }
-                highlightLine('line-5');
-                state.step = 5;
-                renderList();
-                return;
-            }
-            if (state.step === 5) {
-                // prev = curr
-                state.prev = state.curr;
-                highlightLine('line-6');
-                state.step = 6;
-                renderList();
-                return;
-            }
-            if (state.step === 6) {
-                // curr = next_node
-                state.curr = state.next_node;
-                highlightLine('line-7');
-                state.step = 2; // Loop back up to evaluate while condition
                 renderList();
                 return;
             }
@@ -305,22 +404,24 @@
 
         function reset() {
             state = {
-                prev: -1,
-                curr: 0,
-                next_node: -1,
                 step: 0,
-                arrowsReversed: [false, false, false, false]
+                prev: -1, curr: 0, next_node: -1,
+                head: 0, newHead: -1,
+                arrows: [false, false, false, false],
+                nullPointerTarget: 'right'
             };
             stepBtn.disabled = false;
             stepBtn.innerText = "Next Step ➔";
-            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight'));
+            highlightLine(null);
             renderList();
         }
 
-        stepBtn.addEventListener('click', runNextStep);
-        resetBtn.addEventListener('click', reset);
+        stepBtn.addEventListener('click', () => {
+            if(currentMethod === 'iterative') runIterativeStep();
+            else runRecursiveStep();
+        });
+        document.getElementById('reset-btn').addEventListener('click', reset);
 
-        // Intial Init
         renderList();
     </script>
 </body>
