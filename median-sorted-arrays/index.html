@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Median of Two Sorted Arrays Visualizer</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f6f9;
+            color: #333;
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+        h2 { text-align: center; color: #2c3e50; }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 25px;
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #3498db;
+            color: white;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        
+        .array-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin-bottom: 20px;
+        }
+        .array-title { font-weight: bold; margin-bottom: 8px; color: #7f8c8d; }
+        .row {
+            display: flex;
+            align-items: center;
+            position: relative;
+            margin-bottom: 25px;
+            padding: 10px 0;
+        }
+        .element {
+            width: 60px;
+            height: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #bdc3c7;
+            margin-right: 5px;
+            font-weight: bold;
+            font-size: 18px;
+            border-radius: 4px;
+            background: #ecf0f1;
+            position: relative;
+        }
+        .element.left-side { background: #d5f5e3; border-color: #2ecc71; }
+        .element.right-side { background: #fdebd0; border-color: #f39c12; }
+        .element.infinity { font-size: 14px; color: #7f8c8d; border-style: dashed; }
+        
+        .label-tag {
+            position: absolute;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 2px 4px;
+            border-radius: 3px;
+            color: white;
+        }
+        .label-tag.L { background: #27ae60; bottom: -18px; left: 5px; }
+        .label-tag.R { background: #d35400; top: -18px; left: 5px; }
+
+        .partition-line {
+            width: 4px;
+            height: 70px;
+            background-color: #e74c3c;
+            position: relative;
+            z-index: 10;
+            margin-right: 5px;
+            box-shadow: 0 0 8px rgba(231, 76, 60, 0.7);
+        }
+        
+        .status-box {
+            background: #2c3e50;
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 15px;
+            line-height: 1.6;
+        }
+        .pass { color: #2ecc71; font-weight: bold; }
+        .fail { color: #e74c3c; font-weight: bold; }
+        .highlight { color: #f1c40f; }
+    </style>
+</head>
+<body>
+
+    <h2>Median Partition Visualizer</h2>
+    
+    <div class="controls">
+        <button id="btn-left" onclick="moveCut(-1)">← Move Cut 1 Left (i--)</button>
+        <button id="btn-right" onclick="moveCut(1)">Move Cut 1 Right (i++) →</button>
+    </div>
+
+    <div class="array-container">
+        <div class="array-title">Array 1 (nums1) - Binary Searching Here</div>
+        <div id="row1" class="row"></div>
+
+        <div class="array-title">Array 2 (nums2) - Automatically Balancing</div>
+        <div id="row2" class="row"></div>
+    </div>
+
+    <div id="status" class="status-box"></div>
+
+    <script>
+        const nums1 = [1, 4, 7, 9];
+        const nums2 = [2, 3, 5, 8, 10, 12];
+        
+        const m = nums1.length;
+        const n = nums2.length;
+        const halfLen = Math.floor((m + n + 1) / 2); // Total elements wanted on Left = 5
+        
+        // Start cut index i in the middle of nums1
+        let i = 2; 
+
+        function render() {
+            let j = halfLen - i;
+            
+            // Determine boundary values
+            let L1 = (i === 0) ? -Infinity : nums1[i - 1];
+            let R1 = (i === m) ? Infinity : nums1[i];
+            let L2 = (j === 0) ? -Infinity : nums2[j - 1];
+            let R2 = (j === n) ? Infinity : nums2[j];
+
+            // Render Row 1
+            const row1 = document.getElementById('row1');
+            row1.innerHTML = '';
+            buildRowElements(row1, nums1, i, 'L1', 'R1');
+
+            // Render Row 2
+            const row2 = document.getElementById('row2');
+            row2.innerHTML = '';
+            buildRowElements(row2, nums2, j, 'L2', 'R2');
+
+            // Check Conditions
+            let cond1 = L1 <= R2;
+            let cond2 = L2 <= R1;
+            let isValid = cond1 && cond2;
+
+            // Render Status Window
+            const status = document.getElementById('status');
+            let html = `// CURRENT METRICS:<br>`;
+            html += `Total Left Elements Target = ${halfLen} (Current Left elements: ${i} from nums1 + ${j} from nums2 = ${i+j})<br><br>`;
+            html += `// CROSS-CHECK CONDITIONS:<br>`;
+            html += `Condition 1 (L1 <= R2): ${L1} <= ${R2} → <span class="${cond1?'pass':'fail'}">${cond1?'PASSED':'FAILED'}</span><br>`;
+            html += `Condition 2 (L2 <= R1): ${L2} <= ${R1} → <span class="${cond2?'pass':'fail'}">${cond2?'PASSED':'FAILED'}</span><br><br>`;
+            
+            if (isValid) {
+                let median;
+                if ((m + n) % 2 !== 0) {
+                    median = Math.max(L1, L2);
+                    html += `<span class="pass">★ PERFECT SPLIT!</span> Total count is Odd.<br>`;
+                    html += `Median = max(L1, L2) = max(${L1}, ${L2}) = <span class="highlight">${median}</span>`;
+                } else {
+                    median = (Math.max(L1, L2) + Math.min(R1, R2)) / 2.0;
+                    html += `<span class="pass">★ PERFECT SPLIT!</span> Total count is Even.<br>`;
+                    html += `Median = (max(${L1}, ${L2}) + min(${R1}, ${R2})) / 2 = <span class="highlight">${median}</span>`;
+                }
+            } else if (L1 > R2) {
+                html += `<span class="fail">⚠ INVALID SPLIT:</span> L1 (${L1}) is greater than R2 (${R2}).<br>`;
+                html += `Action: We took too many large elements from nums1. <span class="highlight">Move Cut 1 Left (high = i - 1)</span>.`;
+            } else {
+                html += `<span class="fail">⚠ INVALID SPLIT:</span> L2 (${L2}) is greater than R1 (${R1}).<br>`;
+                html += `Action: nums1 needs to contribute larger items. <span class="highlight">Move Cut 1 Right (low = i + 1)</span>.`;
+            }
+
+            status.innerHTML = html;
+            
+            // Manage button lockouts at extreme boundaries
+            document.getElementById('btn-left').disabled = (i === 0);
+            document.getElementById('btn-right').disabled = (i === m);
+        }
+
+        function buildRowElements(container, arr, cutIndex, lLabel, rLabel) {
+            // Virtual INT_MIN Left Shield
+            if (cutIndex === 0) {
+                let infLeft = document.createElement('div');
+                infLeft.className = 'element infinity left-side';
+                infLeft.innerHTML = '-∞<span class="label-tag L">' + lLabel + '</span>';
+                container.appendChild(infLeft);
+            }
+
+            // Render actual array items
+            for (let idx = 0; idx < arr.length; idx++) {
+                if (idx === cutIndex) {
+                    let line = document.createElement('div');
+                    line.className = 'partition-line';
+                    container.appendChild(line);
+                }
+
+                let el = document.createElement('div');
+                let isLeft = idx < cutIndex;
+                el.className = 'element ' + (isLeft ? 'left-side' : 'right-side');
+                el.innerText = arr[idx];
+
+                // Append tags to the boundary items
+                if (isLeft && idx === cutIndex - 1) {
+                    el.innerHTML += `<span class="label-tag L">${lLabel}</span>`;
+                }
+                if (!isLeft && idx === cutIndex) {
+                    el.innerHTML += `<span class="label-tag R">${rLabel}</span>`;
+                }
+
+                container.appendChild(el);
+            }
+
+            // If cut is at the very end, drop partition line and virtual INT_MAX Right Shield
+            if (cutIndex === arr.length) {
+                let line = document.createElement('div');
+                line.className = 'partition-line';
+                container.appendChild(line);
+
+                let infRight = document.createElement('div');
+                infRight.className = 'element infinity right-side';
+                infRight.innerHTML = '+∞<span class="label-tag R">' + rLabel + '</span>';
+                container.appendChild(infRight);
+            }
+        }
+
+        function moveCut(direction) {
+            i += direction;
+            render();
+        }
+
+        // Run initial configuration render
+        render();
+    </script>
+</body>
+</html>
