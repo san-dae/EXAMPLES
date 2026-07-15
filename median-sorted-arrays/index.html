@@ -35,7 +35,7 @@
         .layout-container {
             display: flex;
             gap: 20px;
-            max-width: 1100px;
+            max-width: 1200px;
             width: 100%;
         }
 
@@ -72,16 +72,28 @@
             border-radius: 8px;
             margin-bottom: 25px;
             border: 1px solid #334155;
+            gap: 15px;
+        }
+
+        .selector-box select {
+            padding: 8px;
+            border-radius: 4px;
+            background: #1e293b;
+            color: white;
+            border: 1px solid #475569;
+            font-weight: 600;
+            cursor: pointer;
         }
 
         .step-indicator {
             font-weight: bold;
             color: #60a5fa;
-            font-size: 14px;
+            font-size: 13px;
+            flex: 1;
         }
 
         button {
-            padding: 10px 20px;
+            padding: 10px 16px;
             font-size: 14px;
             font-weight: 700;
             cursor: pointer;
@@ -90,6 +102,7 @@
             background-color: var(--primary);
             color: white;
             transition: opacity 0.2s;
+            white-space: nowrap;
         }
         button:hover { opacity: 0.9; }
         button:disabled { background-color: #475569; color: #94a3b8; cursor: not-allowed; }
@@ -98,22 +111,31 @@
             display: flex;
             align-items: center;
             margin-bottom: 35px;
-            min-height: 70px;
+            min-height: 85px;
         }
 
         .element {
-            width: 50px;
-            height: 50px;
+            width: 52px;
+            height: 52px;
             display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             border: 2px solid #475569;
             margin-right: 4px;
-            font-weight: 700;
-            font-size: 16px;
             border-radius: 6px;
             background: #1e293b;
             position: relative;
+        }
+        .element .idx-lbl {
+            font-size: 10px;
+            color: var(--text-muted);
+            margin-bottom: 2px;
+            font-weight: normal;
+        }
+        .element .val-lbl {
+            font-weight: 700;
+            font-size: 16px;
         }
         .element.left-side { background: var(--left-side); border-color: var(--left-border); }
         .element.right-side { background: var(--right-side); border-color: var(--right-border); }
@@ -121,18 +143,19 @@
 
         .label-tag {
             position: absolute;
-            font-size: 10px;
+            font-size: 9px;
             font-weight: 800;
             padding: 1px 3px;
             border-radius: 3px;
             color: white;
+            white-space: nowrap;
         }
-        .label-tag.L { background: var(--left-border); bottom: -16px; left: 5px; }
-        .label-tag.R { background: var(--right-border); top: -16px; left: 5px; }
+        .label-tag.L { background: var(--left-border); bottom: -16px; left: 50%; transform: translateX(-50%); }
+        .label-tag.R { background: var(--right-border); top: -16px; left: 50%; transform: translateX(-50%); }
 
         .partition-line {
             width: 4px;
-            height: 70px;
+            height: 75px;
             background-color: var(--accent-red);
             margin-right: 4px;
             box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
@@ -164,24 +187,28 @@
 <body>
 
     <h2>Loop Simulation Engine Trace</h2>
-    <div class="subtitle">Step frame-by-frame through an unbalanced array setup requiring real-time code path shifts</div>
+    <div class="subtitle">Step frame-by-frame through C++ execution with tracked local bounds, vector indices, and final median equations</div>
 
     <div class="layout-container">
         <div class="left-panel">
             <div class="visualizer-card">
                 <div class="sim-controls">
-                    <div class="step-indicator" id="step-desc">Click "Next Frame" to initialize program stack</div>
+                    <div class="selector-box">
+                        <select id="sim-mode" onchange="changeMode()">
+                            <option value="even">Example 1: Total Length Even (m=4, n=6)</option>
+                            <option value="odd">Example 2: Total Length Odd (m=3, n=6)</option>
+                        </select>
+                    </div>
+                    <div class="step-indicator" id="step-desc">Click "Next Frame" to load framework stack</div>
                     <button id="next-btn" onclick="executeNextFrame()">Next Frame →</button>
                 </div>
 
-                <div style="font-size:13px; color:var(--text-muted); margin-bottom:15px;">
-                    nums1 = [7, 8, 9, 10] (m=4) &nbsp;|&nbsp; nums2 = [1, 2, 3, 4, 5, 6] (n=6) &nbsp;|&nbsp; <strong>halfLen = 5</strong>
-                </div>
+                <div style="font-size:13px; color:var(--text-muted); margin-bottom:15px;" id="array-meta"></div>
 
                 <div id="row1" class="row"></div>
                 <div id="row2" class="row"></div>
 
-                <div id="verdict-box" style="font-size: 14px; font-weight: bold; padding: 15px; border-radius: 6px; margin-top: 10px;"></div>
+                <div id="verdict-box" style="font-size: 14px; font-weight: bold; padding: 15px; border-radius: 6px; margin-top: 10px; line-height: 1.5;"></div>
             </div>
         </div>
 
@@ -190,7 +217,10 @@
             <div class="code-line" id="l-loop"><span class="code-keyword">while</span> (low &lt;= high) {</div>
             <div class="code-line" id="l-calc">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">int</span> i = low + (high - low) / <span style="color:#f59e0b">2</span>; <span class="code-keyword">int</span> j = halfLen - i;</div>
             <div class="code-line" id="l-vars">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">int</span> L1 = ..., R1 = ..., L2 = ..., R2 = ...;</div>
-            <div class="code-line" id="l-if">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">if</span> (L1 &lt;= R2 && L2 &lt;= R1) <span class="code-keyword">return</span> median;</div>
+            <div class="code-line" id="l-if">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">if</span> (L1 &lt;= R2 && L2 &lt;= R1) {</div>
+            <div class="code-line" id="l-success-odd">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">if</span> (isOdd) <span class="code-keyword">return</span> max(L1, L2);</div>
+            <div class="code-line" id="l-success-even">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">return</span> (max(L1, L2) + min(R1, R2)) / <span style="color:#f59e0b">2.0</span>;</div>
+            <div class="code-line">&nbsp;&nbsp;&nbsp;&nbsp;}</div>
             <div class="code-line" id="l-elif">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">else if</span> (L1 &gt; R2) high = i - <span style="color:#f59e0b">1</span>;</div>
             <div class="code-line" id="l-else">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">else</span> low = i + <span style="color:#f59e0b">1</span>;</div>
             <div class="code-line">}</div>
@@ -202,48 +232,83 @@
                     <div>high: <span id="v-high" class="highlight-val">-</span></div>
                     <div>i: <span id="v-i" class="highlight-val">-</span></div>
                     <div>j: <span id="v-j" class="highlight-val">-</span></div>
-                    <div>L1: <span id="v-l1" style="color:#ef4444">-</span></div>
+                    <div>L1: <span id="v-l1" style="color:#10b981">-</span></div>
                     <div>R1: <span id="v-r1" style="color:#ef4444">-</span></div>
-                    <div>L2: <span id="v-l2" style="color:#60a5fa">-</span></div>
-                    <div>R2: <span id="v-r2" style="color:#60a5fa">-</span></div>
+                    <div>L2: <span id="v-l2" style="color:#10b981">-</span></div>
+                    <div>R2: <span id="v-r2" style="color:#ef4444">-</span></div>
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Array setup specifically forced to trigger an un-aligned binary search path progression
-        const test1 = [7, 8, 9, 10];
-        const test2 = [1, 2, 3, 4, 5, 6];
-        const halfLen = 5;
+        // Datasets configuration configurations
+        const datasets = {
+            even: {
+                nums1: [7, 8, 9, 10],
+                nums2: [1, 2, 3, 4, 5, 6],
+                halfLen: 5,
+                totalOdd: false
+            },
+            odd: {
+                nums1: [11, 12, 13],
+                nums2: [2, 4, 6, 7, 8, 9],
+                halfLen: 5,
+                totalOdd: true
+            }
+        };
 
-        // Visual simulation engine configurations state sequence
-        let low = 0, high = 4, i = 2, j = 3;
+        let activeMode = 'even';
+        let current = datasets[activeMode];
+        let low = 0, high = current.nums1.length, i = 0, j = 0;
         let simFrame = 0;
+
+        function changeMode() {
+            activeMode = document.getElementById('sim-mode').value;
+            current = datasets[activeMode];
+            low = 0;
+            high = current.nums1.length;
+            simFrame = 0;
+            document.getElementById('next-btn').disabled = false;
+            renderEngineFrame("Ready to simulate. Click Next Frame to load.", null, "Engine idle...", "#1e293b", "#94a3b8");
+        }
 
         function renderEngineFrame(stepLabel, activeLineId, verdictText, bgColor, txtColor) {
             document.getElementById('step-desc').innerText = stepLabel;
             
+            // Manage array meta string content descriptions
+            const m = current.nums1.length;
+            const n = current.nums2.length;
+            document.getElementById('array-meta').innerHTML = `nums1 = [${current.nums1.join(', ')}] (m=${m}) &nbsp;|&nbsp; nums2 = [${current.nums2.join(', ')}] (n=${n}) &nbsp;|&nbsp; <strong>halfLen = ${current.halfLen}</strong>`;
+
             document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
             if(activeLineId) document.getElementById(activeLineId).classList.add('active');
 
             document.getElementById('v-low').innerText = low;
             document.getElementById('v-high').innerText = high;
-            document.getElementById('v-i').innerText = i;
-            document.getElementById('v-j').innerText = j;
+            document.getElementById('v-i').innerText = simFrame === 0 ? "-" : i;
+            document.getElementById('v-j').innerText = simFrame === 0 ? "-" : j;
 
-            let L1 = (i === 0) ? -Infinity : test1[i - 1];
-            let R1 = (i === 4) ? Infinity : test1[i];
-            let L2 = (j === 0) ? -Infinity : test2[j - 1];
-            let R2 = (j === 6) ? Infinity : test2[j];
+            let L1 = (i === 0) ? -Infinity : current.nums1[i - 1];
+            let R1 = (i === m) ? Infinity : current.nums1[i];
+            let L2 = (j === 0) ? -Infinity : current.nums2[j - 1];
+            let R2 = (j === n) ? Infinity : current.nums2[j];
 
-            document.getElementById('v-l1').innerText = L1 === -Infinity ? "INT_MIN" : L1;
-            document.getElementById('v-r1').innerText = R1 === Infinity ? "INT_MAX" : R1;
-            document.getElementById('v-l2').innerText = L2 === -Infinity ? "INT_MIN" : L2;
-            document.getElementById('v-r2').innerText = R2 === Infinity ? "INT_MAX" : R2;
-
-            buildRow(document.getElementById('row1'), test1, i, 'L1', 'R1');
-            buildRow(document.getElementById('row2'), test2, j, 'L2', 'R2');
+            if (simFrame === 0) {
+                document.getElementById('v-l1').innerText = "-";
+                document.getElementById('v-r1').innerText = "-";
+                document.getElementById('v-l2').innerText = "-";
+                document.getElementById('v-r2').innerText = "-";
+                buildRow(document.getElementById('row1'), current.nums1, -1, 'L1', 'R1');
+                buildRow(document.getElementById('row2'), current.nums2, -1, 'L2', 'R2');
+            } else {
+                document.getElementById('v-l1').innerText = L1 === -Infinity ? "INT_MIN" : L1;
+                document.getElementById('v-r1').innerText = R1 === Infinity ? "INT_MAX" : R1;
+                document.getElementById('v-l2').innerText = L2 === -Infinity ? "INT_MIN" : L2;
+                document.getElementById('v-r2').innerText = R2 === Infinity ? "INT_MAX" : R2;
+                buildRow(document.getElementById('row1'), current.nums1, i, 'L1', 'R1');
+                buildRow(document.getElementById('row2'), current.nums2, j, 'L2', 'R2');
+            }
 
             let vBox = document.getElementById('verdict-box');
             vBox.style.backgroundColor = bgColor;
@@ -253,66 +318,100 @@
 
         function buildRow(container, arr, cutIdx, lStr, rStr) {
             container.innerHTML = '';
+            
             if (cutIdx === 0) {
                 let g = document.createElement('div'); g.className = 'element infinity left-side';
-                g.innerHTML = `-∞<span class="label-tag L">${lStr}</span>`; container.appendChild(g);
+                g.innerHTML = `<span class="idx-lbl">[-1]</span><span class="val-lbl">-∞</span><span class="label-tag L">${lStr}</span>`; 
+                container.appendChild(g);
             }
+            
             for (let k = 0; k < arr.length; k++) {
                 if (k === cutIdx) {
                     let l = document.createElement('div'); l.className = 'partition-line'; container.appendChild(l);
                 }
                 let box = document.createElement('div');
-                let isLeft = k < cutIdx;
-                box.className = 'element ' + (isLeft ? 'left-side' : 'right-side');
-                box.innerText = arr[k];
+                let isLeft = cutIdx === -1 ? false : k < cutIdx;
+                box.className = 'element ' + (cutIdx === -1 ? '' : (isLeft ? 'left-side' : 'right-side'));
+                
+                box.innerHTML = `<span class="idx-lbl">[${k}]</span><span class="val-lbl">${arr[k]}</span>`;
+                
                 if (isLeft && k === cutIdx - 1) box.innerHTML += `<span class="label-tag L">${lStr}</span>`;
                 if (!isLeft && k === cutIdx) box.innerHTML += `<span class="label-tag R">${rStr}</span>`;
                 container.appendChild(box);
             }
+            
             if (cutIdx === arr.length) {
                 let l = document.createElement('div'); l.className = 'partition-line'; container.appendChild(l);
                 let g = document.createElement('div'); g.className = 'element infinity right-side';
-                g.innerHTML = `+∞<span class="label-tag R">${rStr}</span>`; container.appendChild(g);
+                g.innerHTML = `<span class="idx-lbl">[${arr.length}]</span><span class="val-lbl">+∞</span><span class="label-tag R">${rStr}</span>`; 
+                container.appendChild(g);
             }
         }
 
         function executeNextFrame() {
             simFrame++;
 
+            if (activeMode === 'even') {
+                runEvenSimulation();
+            } else {
+                runOddSimulation();
+            }
+        }
+
+        function runEvenSimulation() {
             if (simFrame === 1) {
-                // Initialize pointers loop evaluation
                 i = Math.floor((low + high) / 2); // 2
-                j = halfLen - i; // 3
-                renderEngineFrame("FRAME 1: First cut pass loaded. Pointers set.", "l-calc", "Evaluating boundaries status checks...", "#334155", "#fff");
+                j = current.halfLen - i; // 3
+                renderEngineFrame("FRAME 1: First cut run parameters assigned.", "l-calc", `Calculated pointers:<br>i = ${low} + (${high} - ${low}) / 2 = <strong>${i}</strong><br>j = ${current.halfLen} - ${i} = <strong>${j}</strong>`, "#334155", "#fff");
             } 
             else if (simFrame === 2) {
-                // Check evaluations fails path
-                // L1=8, R1=9, L2=3, R2=4 -> L1 (8) > R2 (4) -> Trigger high shift
-                renderEngineFrame("FRAME 2: Condition check fails! L1(8) > R2(4). Top elements are too large.", "l-elif", "Condition evaluation failed: high = i - 1", "#7f1d1d", "#f87171");
+                renderEngineFrame("FRAME 2: Testing edge bounds validation indices.", "l-elif", "Cross checking rules:<br>L1 (nums1[1]=8) <= R2 (nums2[3]=4) ❌ <strong>FAIL</strong><br>L2 (nums2[2]=3) <= R1 (nums1[2]=9) ✓ PASS", "#7f1d1d", "#f87171");
             }
             else if (simFrame === 3) {
-                // Shift boundary calculations
-                high = i - 1; // high becomes 1
-                i = Math.floor((low + high) / 2); // (0+1)/2 = 0
-                j = halfLen - i; // 5 - 0 = 5
-                renderEngineFrame("FRAME 3: Re-calculating cuts with new high bound parameter...", "l-calc", "Boundaries updated! Cut lines shifting...", "#334155", "#fff");
+                high = i - 1; // 1
+                i = Math.floor((low + high) / 2); // 0
+                j = current.halfLen - i; // 5
+                renderEngineFrame("FRAME 3: Re-balancing parameters based on high shift boundaries.", "l-calc", `Adjusted bounds: high = i - 1 = <strong>1</strong><br>New i = 0, New j = 5`, "#334155", "#fff");
             }
             else if (simFrame === 4) {
-                // Evaluate frame 2 check parameters
-                // i=0 -> L1=-INF, R1=7, j=5 -> L2=5, R2=6
-                // Check: L1(-INF) <= R2(6) [True] && L2(5) <= R1(7) [True] -> SUCCESS
-                renderEngineFrame("FRAME 4: Re-checking boundary states. Both conditions pass!", "l-if", "Cross check matching complete! Split verified.", "#064e3b", "#34d399");
+                renderEngineFrame("FRAME 4: Checking newly placed split line alignments.", "l-if", "Cross checking rules:<br>L1 (-∞) <= R2 (nums2[5]=6) ✓ PASS<br>L2 (nums2[4]=5) <= R1 (nums1[0]=7) ✓ <strong>PASS</strong>", "#064e3b", "#34d399");
             }
             else if (simFrame === 5) {
-                // Display output parameters
-                let med = (Math.max(-Infinity, 5) + Math.min(7, 6)) / 2.0; // (5 + 6)/2 = 5.5
-                renderEngineFrame("SIMULATION COMPLETE: Target verified.", "l-success", `Program Terminated.<br>Returned Median: <span style="font-size:18px">${med}</span>`, "var(--left-side)", "var(--left-border)");
+                let leftMax = Math.max(-Infinity, 5);
+                let rightMin = Math.min(7, 6);
+                let med = (leftMax + rightMin) / 2.0;
+                renderEngineFrame("SIMULATION COMPLETE: Even collection evaluated.", "l-success-even", `Formula: (max(L1, L2) + min(R1, R2)) / 2.0<br>(max(-∞, 5) + min(7, 6)) / 2.0 = (5 + 6) / 2.0 = <span style="font-size:18px;color:#f59e0b">${med}</span>`, "var(--left-side)", "var(--left-border)");
                 document.getElementById('next-btn').disabled = true;
             }
         }
 
-        // Setup base visibility state values layout context on screen render boot
-        renderEngineFrame("Ready to simulate. Click Next Frame to load.", null, "Engine idle...", "#1e293b", "#94a3b8");
+        function runOddSimulation() {
+            if (simFrame === 1) {
+                i = Math.floor((low + high) / 2); // 1
+                j = current.halfLen - i; // 4
+                renderEngineFrame("FRAME 1: First split index pass loaded.", "l-calc", `Calculated pointers:<br>i = ${low} + (${high} - ${low}) / 2 = <strong>${i}</strong><br>j = ${current.halfLen} - ${i} = <strong>${j}</strong>`, "#334155", "#fff");
+            }
+            else if (simFrame === 2) {
+                renderEngineFrame("FRAME 2: Validating pointers alignment checks.", "l-elif", "Cross checking rules:<br>L1 (nums1[0]=11) <= R2 (nums2[4]=8) ❌ <strong>FAIL</strong><br>L2 (nums2[3]=7) <= R1 (nums1[1]=12) ✓ PASS", "#7f1d1d", "#f87171");
+            }
+            else if (simFrame === 3) {
+                high = i - 1; // 0
+                i = Math.floor((low + high) / 2); // 0
+                j = current.halfLen - i; // 5
+                renderEngineFrame("FRAME 3: Sliding range left and shifting boundary frames.", "l-calc", `Adjusted bounds: high = i - 1 = <strong>0</strong><br>New i = 0, New j = 5`, "#334155", "#fff");
+            }
+            else if (simFrame === 4) {
+                renderEngineFrame("FRAME 4: Evaluating boundary targets for modified arrays split.", "l-if", "Cross checking rules:<br>L1 (-∞) <= R2 (nums2[5]=9) ✓ PASS<br>L2 (nums2[4]=8) <= R1 (nums1[0]=11) ✓ <strong>PASS</strong>", "#064e3b", "#34d399");
+            }
+            else if (simFrame === 5) {
+                let leftMax = Math.max(-Infinity, 8);
+                renderEngineFrame("SIMULATION COMPLETE: Odd collection evaluated.", "l-success-odd", `Total items count is ODD (3 + 6 = 9).<br>Formula: max(L1, L2)<br>max(-∞, 8) = <span style="font-size:18px;color:#f59e0b">${leftMax}.0</span>`, "var(--left-side)", "var(--left-border)");
+                document.getElementById('next-btn').disabled = true;
+            }
+        }
+
+        // Boot configuration frame engine on load initialization
+        changeMode();
     </script>
 </body>
 </html>
