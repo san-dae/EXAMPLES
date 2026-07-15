@@ -3,250 +3,412 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Median of Two Sorted Arrays Visualizer</title>
+    <title>Median of Two Sorted Arrays Code Tracer</title>
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #f4f6f9;
-            color: #333;
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 20px;
+        :root {
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --left-side: #dcfce7;
+            --left-border: #22c55e;
+            --right-side: #ffedd5;
+            --right-border: #f97316;
+            --accent-red: #ef4444;
+            --code-bg: #0f172a;
         }
-        h2 { text-align: center; color: #2c3e50; }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h2 { margin-bottom: 5px; color: #0f172a; }
+        .subtitle { color: var(--text-muted); margin-bottom: 25px; text-align: center; font-size: 14px; }
+
+        .layout-container {
+            display: flex;
+            gap: 20px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .left-panel {
+            flex: 1.2;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .right-panel {
+            flex: 0.8;
+            background: var(--code-bg);
+            color: #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            position: relative;
+        }
+
+        .visualizer-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+        }
+
         .controls {
             display: flex;
-            justify-content: center;
-            gap: 15px;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 25px;
-            background: white;
-            padding: 15px;
+            background: #f1f5f9;
+            padding: 12px;
             border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
+
         button {
-            padding: 10px 20px;
-            font-size: 16px;
-            font-weight: bold;
+            padding: 10px 16px;
+            font-size: 14px;
+            font-weight: 600;
             cursor: pointer;
             border: none;
-            border-radius: 5px;
-            background-color: #3498db;
+            border-radius: 6px;
+            background-color: var(--primary);
             color: white;
             transition: background 0.2s;
         }
-        button:hover { background-color: #2980b9; }
-        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
-        
-        .array-container {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            margin-bottom: 20px;
+        button:hover { background-color: var(--primary-hover); }
+        button:disabled { background-color: #cbd5e1; cursor: not-allowed; }
+
+        .search-bounds {
+            font-size: 13px;
+            font-weight: bold;
+            color: var(--text-muted);
+            display: flex;
+            gap: 15px;
         }
-        .array-title { font-weight: bold; margin-bottom: 8px; color: #7f8c8d; }
+
+        .array-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
         .row {
             display: flex;
             align-items: center;
-            position: relative;
-            margin-bottom: 25px;
-            padding: 10px 0;
+            margin-bottom: 35px;
+            min-height: 80px;
         }
+
         .element {
-            width: 60px;
-            height: 50px;
+            width: 55px;
+            height: 55px;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
-            border: 2px solid #bdc3c7;
-            margin-right: 5px;
-            font-weight: bold;
-            font-size: 18px;
-            border-radius: 4px;
-            background: #ecf0f1;
+            border: 2px solid #cbd5e1;
+            margin-right: 4px;
+            font-weight: 700;
+            font-size: 16px;
+            border-radius: 6px;
+            background: #f8fafc;
             position: relative;
+            transition: all 0.3s ease;
         }
-        .element.left-side { background: #d5f5e3; border-color: #2ecc71; }
-        .element.right-side { background: #fdebd0; border-color: #f39c12; }
-        .element.infinity { font-size: 14px; color: #7f8c8d; border-style: dashed; }
-        
+        .element.left-side { background: var(--left-side); border-color: var(--left-border); }
+        .element.right-side { background: var(--right-side); border-color: var(--right-border); }
+        .element.infinity { border-style: dashed; color: #94a3b8; }
+
         .label-tag {
             position: absolute;
-            font-size: 12px;
+            font-size: 11px;
             font-weight: 800;
-            padding: 2px 4px;
-            border-radius: 3px;
+            padding: 1px 4px;
+            border-radius: 4px;
             color: white;
+            z-index: 5;
         }
-        .label-tag.L { background: #27ae60; bottom: -18px; left: 5px; }
-        .label-tag.R { background: #d35400; top: -18px; left: 5px; }
+        .label-tag.L { background: var(--left-border); bottom: -18px; left: 50%; transform: translateX(-50%); }
+        .label-tag.R { background: var(--right-border); top: -18px; left: 50%; transform: translateX(-50%); }
 
         .partition-line {
             width: 4px;
-            height: 70px;
-            background-color: #e74c3c;
-            position: relative;
+            height: 75px;
+            background-color: var(--accent-red);
             z-index: 10;
-            margin-right: 5px;
-            box-shadow: 0 0 8px rgba(231, 76, 60, 0.7);
+            margin-right: 4px;
+            box-shadow: 0 0 10px rgba(239, 68, 68, 0.8);
+            border-radius: 2px;
+            position: relative;
         }
-        
-        .status-box {
-            background: #2c3e50;
+        .partition-label {
+            position: absolute;
+            top: -22px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: var(--accent-red);
             color: white;
-            padding: 20px;
-            border-radius: 8px;
-            font-family: monospace;
-            font-size: 15px;
-            line-height: 1.6;
+            font-size: 11px;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-weight: bold;
         }
-        .pass { color: #2ecc71; font-weight: bold; }
-        .fail { color: #e74c3c; font-weight: bold; }
-        .highlight { color: #f1c40f; }
+
+        .state-monitors {
+            display: grid;
+            grid-template-columns: repeat(4, 110px);
+            gap: 10px;
+            background: #f8fafc;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e2e8f0;
+        }
+        .monitor-item { font-size: 12px; font-weight: bold; }
+        .monitor-val { font-family: monospace; font-size: 16px; color: var(--primary); margin-top: 2px; }
+
+        /* Code panel styles */
+        .code-line {
+            padding: 3px 8px;
+            border-left: 3px solid transparent;
+            border-radius: 0 4px 4px 0;
+        }
+        .code-line.active {
+            background: #1e293b;
+            border-left-color: var(--primary);
+            color: #fff;
+        }
+        .code-comment { color: #64748b; }
+        .code-keyword { color: #f472b6; }
+        .code-type { color: #60a5fa; }
+        
+        .var-window {
+            margin-top: 20px;
+            border-top: 1px solid #334155;
+            padding-top: 15px;
+        }
+        .var-title { font-weight: bold; color: #94a3b8; margin-bottom: 8px; font-size: 12px; text-transform: uppercase;}
+        .var-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; font-size: 12px;}
     </style>
 </head>
 <body>
 
-    <h2>Median Partition Visualizer</h2>
-    
-    <div class="controls">
-        <button id="btn-left" onclick="moveCut(-1)">← Move Cut 1 Left (i--)</button>
-        <button id="btn-right" onclick="moveCut(1)">Move Cut 1 Right (i++) →</button>
+    <h2>Median of Two Sorted Arrays</h2>
+    <div class="subtitle">Watch the C++ Binary Search execution frame engine drive physical index array splits</div>
+
+    <div class="layout-container">
+        <div class="left-panel">
+            <div class="visualizer-card">
+                <div class="controls">
+                    <button id="btn-left" onclick="stepSearch(-1)">← Left Shift (high = i - 1)</button>
+                    <div class="search-bounds">
+                        <div>low: <span id="val-low" style="color:var(--text-main)">0</span></div>
+                        <div>high: <span id="val-high" style="color:var(--text-main)">4</span></div>
+                    </div>
+                    <button id="btn-right" onclick="stepSearch(1)">Right Shift (low = i + 1) →</button>
+                </div>
+
+                <div class="array-title">
+                    <span>Top Array (nums1) - Binary Searched</span>
+                    <span id="label-m">m = 4</span>
+                </div>
+                <div id="row1" class="row"></div>
+
+                <div class="array-title">
+                    <span>Bottom Array (nums2) - Balanced (j = halfLen - i)</span>
+                    <span id="label-n">n = 6</span>
+                </div>
+                <div id="row2" class="row"></div>
+
+                <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                    <div>
+                        <div style="font-size: 12px; font-weight: 700; color: var(--text-muted); margin-bottom: 5px;">PILES BREAKDOWN:</div>
+                        <div class="state-monitors">
+                            <div class="monitor-item">halfLen<div class="monitor-val" id="m-half">5</div></div>
+                            <div class="monitor-item">i (nums1 left)<div class="monitor-val" id="m-i">2</div></div>
+                            <div class="monitor-item">j (nums2 left)<div class="monitor-val" id="m-j">3</div></div>
+                            <div class="monitor-item">Total Left<div class="monitor-val" id="m-tot">5</div></div>
+                        </div>
+                    </div>
+                    <div id="verdict-box" style="font-size: 14px; font-weight: bold; padding: 12px; border-radius: 6px; text-align: right; max-width: 300px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="right-panel">
+            <div class="var-title" style="margin-top:0;">C++ Source Code Engine</div>
+            <div class="code-line" id="line-mid"><span class="code-keyword">int</span> i = low + (high - low) / <span style="color:#f59e0b">2</span>;</div>
+            <div class="code-line" id="line-j"><span class="code-keyword">int</span> j = halfLen - i;</div>
+            <div class="code-line" id="line-guards" style="margin-top:6px;"><span class="code-keyword">int</span> L1 = (i == <span style="color:#f59e0b">0</span>) ? INT_MIN : nums1[i-<span style="color:#f59e0b">1</span>];</div>
+            <div class="code-line"><span class="code-keyword">int</span> R1 = (i == m) ? INT_MAX : nums1[i];</div>
+            <div class="code-line"><span class="code-keyword">int</span> L2 = (j == <span style="color:#f59e0b">0</span>) ? INT_MIN : nums2[j-<span style="color:#f59e0b">1</span>];</div>
+            <div class="code-line"><span class="code-keyword">int</span> R2 = (j == n) ? INT_MAX : nums2[j];</div>
+            <div class="code-line" id="line-check" style="margin-top:6px;"><span class="code-keyword">if</span> (L1 &lt;= R2 && L2 &lt;= R1) {</div>
+            <div class="code-line" id="line-success">&nbsp;&nbsp;&nbsp;&nbsp;<span class="code-keyword">return</span> (max(L1, L2) + min(R1, R2)) / <span style="color:#f59e0b">2.0</span>;</div>
+            <div class="code-line">}</div>
+            <div class="code-line" id="line-left-shift"><span class="code-keyword">else if</span> (L1 &gt; R2) high = i - <span style="color:#f59e0b">1</span>;</div>
+            <div class="code-line" id="line-right-shift"><span class="code-keyword">else</span> low = i + <span style="color:#f59e0b">1</span>;</div>
+
+            <div class="var-window">
+                <div class="var-title">Local Scope Variable Stack</div>
+                <div class="var-grid">
+                    <div>L1: <span id="v-l1" style="color:#f43f5e"></span></div>
+                    <div>R1: <span id="v-r1" style="color:#f43f5e"></span></div>
+                    <div>L2: <span id="v-l2" style="color:#60a5fa"></span></div>
+                    <div>R2: <span id="v-r2" style="color:#60a5fa"></span></div>
+                </div>
+            </div>
+        </div>
     </div>
-
-    <div class="array-container">
-        <div class="array-title">Array 1 (nums1) - Binary Searching Here</div>
-        <div id="row1" class="row"></div>
-
-        <div class="array-title">Array 2 (nums2) - Automatically Balancing</div>
-        <div id="row2" class="row"></div>
-    </div>
-
-    <div id="status" class="status-box"></div>
 
     <script>
         const nums1 = [1, 4, 7, 9];
         const nums2 = [2, 3, 5, 8, 10, 12];
-        
         const m = nums1.length;
         const n = nums2.length;
-        const halfLen = Math.floor((m + n + 1) / 2); // Total elements wanted on Left = 5
-        
-        // Start cut index i in the middle of nums1
-        let i = 2; 
+        const halfLen = Math.floor((m + n + 1) / 2); // 5 elements on left side total
+
+        // Tracks state parameters of our manual binary search engine
+        let low = 0;
+        let high = m;
+        let i = Math.floor((low + high) / 2); // Dynamic mid calculation
 
         function render() {
             let j = halfLen - i;
             
-            // Determine boundary values
+            // Calculate actual local variable assignments matching logic
             let L1 = (i === 0) ? -Infinity : nums1[i - 1];
             let R1 = (i === m) ? Infinity : nums1[i];
             let L2 = (j === 0) ? -Infinity : nums2[j - 1];
             let R2 = (j === n) ? Infinity : nums2[j];
 
-            // Render Row 1
-            const row1 = document.getElementById('row1');
-            row1.innerHTML = '';
-            buildRowElements(row1, nums1, i, 'L1', 'R1');
+            // Render array rows out physically
+            buildDOMRow(document.getElementById('row1'), nums1, i, 'L1', 'R1', 'i');
+            buildDOMRow(document.getElementById('row2'), nums2, j, 'L2', 'R2', 'j');
 
-            // Render Row 2
-            const row2 = document.getElementById('row2');
-            row2.innerHTML = '';
-            buildRowElements(row2, nums2, j, 'L2', 'R2');
+            // Update DOM Scope Monitors
+            document.getElementById('val-low').innerText = low;
+            document.getElementById('val-high').innerText = high;
+            document.getElementById('m-i').innerText = i;
+            document.getElementById('m-j').innerText = j;
+            document.getElementById('m-tot').innerText = i + j;
 
-            // Check Conditions
-            let cond1 = L1 <= R2;
-            let cond2 = L2 <= R1;
-            let isValid = cond1 && cond2;
+            // Update C++ stack tracking pane text values
+            document.getElementById('v-l1').innerText = L1 === -Infinity ? "INT_MIN" : L1;
+            document.getElementById('v-r1').innerText = R1 === Infinity ? "INT_MAX" : R1;
+            document.getElementById('v-l2').innerText = L2 === -Infinity ? "INT_MIN" : L2;
+            document.getElementById('v-r2').innerText = R2 === Infinity ? "INT_MAX" : R2;
 
-            // Render Status Window
-            const status = document.getElementById('status');
-            let html = `// CURRENT METRICS:<br>`;
-            html += `Total Left Elements Target = ${halfLen} (Current Left elements: ${i} from nums1 + ${j} from nums2 = ${i+j})<br><br>`;
-            html += `// CROSS-CHECK CONDITIONS:<br>`;
-            html += `Condition 1 (L1 <= R2): ${L1} <= ${R2} → <span class="${cond1?'pass':'fail'}">${cond1?'PASSED':'FAILED'}</span><br>`;
-            html += `Condition 2 (L2 <= R1): ${L2} <= ${R1} → <span class="${cond2?'pass':'fail'}">${cond2?'PASSED':'FAILED'}</span><br><br>`;
+            // Clear all code highlights before checking state context
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('active'));
             
-            if (isValid) {
-                let median;
-                if ((m + n) % 2 !== 0) {
-                    median = Math.max(L1, L2);
-                    html += `<span class="pass">★ PERFECT SPLIT!</span> Total count is Odd.<br>`;
-                    html += `Median = max(L1, L2) = max(${L1}, ${L2}) = <span class="highlight">${median}</span>`;
-                } else {
-                    median = (Math.max(L1, L2) + Math.min(R1, R2)) / 2.0;
-                    html += `<span class="pass">★ PERFECT SPLIT!</span> Total count is Even.<br>`;
-                    html += `Median = (max(${L1}, ${L2}) + min(${R1}, ${R2})) / 2 = <span class="highlight">${median}</span>`;
-                }
+            let vBox = document.getElementById('verdict-box');
+            
+            // Evaluate code pointer path status checks
+            if (L1 <= R2 && L2 <= R1) {
+                // Perfect condition match path!
+                document.getElementById('line-check').classList.add('active');
+                document.getElementById('line-success').classList.add('active');
+                
+                let med = ((m + n) % 2 !== 0) ? Math.max(L1, L2) : (Math.max(L1, L2) + Math.min(R1, R2)) / 2.0;
+                
+                vBox.style.backgroundColor = "var(--left-side)";
+                vBox.style.color = "var(--left-border)";
+                vBox.innerHTML = `✓ Target Reached!<br>Median found: <span style="font-size:18px">${med}</span>`;
+                
+                document.getElementById('btn-left').disabled = true;
+                document.getElementById('btn-right').disabled = true;
             } else if (L1 > R2) {
-                html += `<span class="fail">⚠ INVALID SPLIT:</span> L1 (${L1}) is greater than R2 (${R2}).<br>`;
-                html += `Action: We took too many large elements from nums1. <span class="highlight">Move Cut 1 Left (high = i - 1)</span>.`;
+                // Too many items out of row 1, highlights left boundary shift line
+                document.getElementById('line-left-shift').classList.add('active');
+                vBox.style.backgroundColor = "#fee2e2";
+                vBox.style.color = "var(--accent-red)";
+                vBox.innerHTML = `L1 (${L1}) > R2 (${R2})<br>nums1 elements are too large!`;
+                
+                document.getElementById('btn-left').disabled = false;
+                document.getElementById('btn-right').disabled = true;
             } else {
-                html += `<span class="fail">⚠ INVALID SPLIT:</span> L2 (${L2}) is greater than R1 (${R1}).<br>`;
-                html += `Action: nums1 needs to contribute larger items. <span class="highlight">Move Cut 1 Right (low = i + 1)</span>.`;
+                // Highlights right loop index adjust boundary row step
+                document.getElementById('line-right-shift').classList.add('active');
+                vBox.style.backgroundColor = "#fee2e2";
+                vBox.style.color = "var(--accent-red)";
+                vBox.innerHTML = `L2 (${L2}) > R1 (${R1})<br>Need larger elements from nums1!`;
+                
+                document.getElementById('btn-left').disabled = true;
+                document.getElementById('btn-right').disabled = false;
             }
-
-            status.innerHTML = html;
-            
-            // Manage button lockouts at extreme boundaries
-            document.getElementById('btn-left').disabled = (i === 0);
-            document.getElementById('btn-right').disabled = (i === m);
         }
 
-        function buildRowElements(container, arr, cutIndex, lLabel, rLabel) {
-            // Virtual INT_MIN Left Shield
-            if (cutIndex === 0) {
-                let infLeft = document.createElement('div');
-                infLeft.className = 'element infinity left-side';
-                infLeft.innerHTML = '-∞<span class="label-tag L">' + lLabel + '</span>';
-                container.appendChild(infLeft);
+        function buildDOMRow(container, arr, cutIdx, lStr, rStr, symbol) {
+            container.innerHTML = '';
+            
+            // INT_MIN Guard Block Condition Check
+            if (cutIdx === 0) {
+                let guard = document.createElement('div');
+                guard.className = 'element infinity left-side';
+                guard.innerHTML = `-∞<span class="label-tag L">${lStr}</span>`;
+                container.appendChild(guard);
             }
 
-            // Render actual array items
-            for (let idx = 0; idx < arr.length; idx++) {
-                if (idx === cutIndex) {
+            for (let k = 0; k < arr.length; k++) {
+                if (k === cutIdx) {
                     let line = document.createElement('div');
                     line.className = 'partition-line';
+                    line.innerHTML = `<span class="partition-label">${symbol}=${cutIdx}</span>`;
                     container.appendChild(line);
                 }
 
-                let el = document.createElement('div');
-                let isLeft = idx < cutIndex;
-                el.className = 'element ' + (isLeft ? 'left-side' : 'right-side');
-                el.innerText = arr[idx];
+                let box = document.createElement('div');
+                let leftHeap = k < cutIdx;
+                box.className = 'element ' + (leftHeap ? 'left-side' : 'right-side');
+                box.innerText = arr[k];
 
-                // Append tags to the boundary items
-                if (isLeft && idx === cutIndex - 1) {
-                    el.innerHTML += `<span class="label-tag L">${lLabel}</span>`;
-                }
-                if (!isLeft && idx === cutIndex) {
-                    el.innerHTML += `<span class="label-tag R">${rLabel}</span>`;
-                }
+                if (leftHeap && k === cutIdx - 1) box.innerHTML += `<span class="label-tag L">${lStr}</span>`;
+                if (!leftHeap && k === cutIdx) box.innerHTML += `<span class="label-tag R">${rStr}</span>`;
 
-                container.appendChild(el);
+                container.appendChild(box);
             }
 
-            // If cut is at the very end, drop partition line and virtual INT_MAX Right Shield
-            if (cutIndex === arr.length) {
+            // INT_MAX Guard Block Condition Check
+            if (cutIdx === arr.length) {
                 let line = document.createElement('div');
                 line.className = 'partition-line';
+                line.innerHTML = `<span class="partition-label">${symbol}=${cutIdx}</span>`;
                 container.appendChild(line);
 
-                let infRight = document.createElement('div');
-                infRight.className = 'element infinity right-side';
-                infRight.innerHTML = '+∞<span class="label-tag R">' + rLabel + '</span>';
-                container.appendChild(infRight);
+                let guard = document.createElement('div');
+                guard.className = 'element infinity right-side';
+                guard.innerHTML = `+∞<span class="label-tag R">${rStr}</span>`;
+                container.appendChild(guard);
             }
         }
 
-        function moveCut(direction) {
-            i += direction;
+        function stepSearch(dir) {
+            if (dir === -1) {
+                high = i - 1;
+            } else {
+                low = i + 1;
+            }
+            i = Math.floor((low + high) / 2);
             render();
         }
 
-        // Run initial configuration render
+        // Initialize state view call on launch setup
         render();
     </script>
 </body>
