@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursion Tree Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --primary-color: #2c3e50;
+            --accent-color: #3498db;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --panel-bg: #ffffff;
+            --highlight-bg: #2980b9;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--primary-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { margin-bottom: 5px; }
+        p { margin-top: 0; color: #7f8c8d; margin-bottom: 20px; }
+
+        /* Three Column Layout to place Call Stack in the spotlight */
+        .container {
+            display: grid;
+            grid-template-columns: 1.1fr 1.3fr 1.6fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1400px;
+            height: 82vh;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Highlighting the stack column specifically */
+        .panel.stack-highlight {
+            border: 3px solid var(--accent-color);
+            box-shadow: 0 6px 12px rgba(52, 152, 219, 0.2);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        input, button {
+            padding: 10px 15px;
+            border-radius: 4px;
+            border: 1px solid #bdc3c7;
+            font-size: 14px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        button:hover { background-color: #2980b9; }
+        button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+
+        /* Code Highlight */
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 13px;
+            overflow-x: auto;
+            margin: 0;
+            flex-grow: 1;
+        }
+
+        .line { display: block; padding: 2px 4px; border-radius: 3px; }
+        .highlight { background-color: rgba(231, 76, 60, 0.4); color: #fff; font-weight: bold; }
+
+        /* Call Stack & Logs */
+        .status-box {
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+            overflow: hidden;
+        }
+
+        #actionDescription {
+            font-size: 16px;
+            line-height: 1.4;
+            background: #ebf5fb;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 5px solid var(--accent-color);
+        }
+
+        .stack-list {
+            margin-top: 15px;
+            overflow-y: auto;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stack-frame {
+            background: #f8f9f9;
+            padding: 12px 15px;
+            border-left: 5px solid var(--primary-color);
+            border-radius: 4px;
+            font-size: 13px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+            transition: all 0.2s;
+        }
+
+        .stack-frame.active-frame {
+            border-left-color: var(--danger-color);
+            background: #fdf2f2;
+            font-weight: bold;
+        }
+
+        /* Canvas / Tree Area */
+        .visual-area {
+            position: relative;
+            flex-grow: 1;
+            border: 1px dashed #bdc3c7;
+            border-radius: 6px;
+            overflow: auto;
+            background: #fafafa;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .node-circle {
+            fill: #fff;
+            stroke: var(--primary-color);
+            stroke-width: 2px;
+            transition: all 0.3s;
+        }
+
+        .node-circle.active { fill: rgba(231, 76, 60, 0.2); stroke: var(--danger-color); stroke-width: 3px; }
+        .node-circle.created { fill: var(--success-color); stroke: #27ae60; }
+        .node-circle.null-node { fill: #e67e22; stroke: #d35400; }
+
+        .node-text {
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+            fill: var(--primary-color);
+            pointer-events: none;
+        }
+        .node-circle.created + .node-text { fill: white; }
+        .node-circle.null-node + .node-text { fill: white; }
+
+        .tree-edge {
+            stroke: #bdc3c7;
+            stroke-width: 2px;
+            fill: none;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Recursion Tree Visualizer</h1>
+    <p>Step through Complete Binary Tree construction with detailed stack tracing.</p>
+
+    <div class="container">
+        <div class="panel">
+            <h3>Controls & Code</h3>
+            <div class="controls">
+                <input type="text" id="arrayInput" value="10, 20, 30, 40" style="width: 100px;">
+                <button id="startBtn" onclick="initSimulation()">Restart</button>
+                <button id="nextBtn" onclick="stepForward()" disabled>Next Step ➔</button>
+            </div>
+
+            <pre id="codeBlock">
+<span class="line" id="l1">Node* buildTreeHelper(vector&lt;int&gt;& nodes, int i) {</span>
+<span class="line" id="l2">    if (i >= nodes.size()) return nullptr;</span>
+
+<span class="line" id="l3">    Node* root = new Node(nodes[i]);</span>
+<span class="line" id="l4">    root->left = buildTreeHelper(nodes, 2 * i + 1);</span>
+<span class="line" id="l5">    root->right = buildTreeHelper(nodes, 2 * i + 2);</span>
+
+<span class="line" id="l6">    return root;</span>
+<span class="line" id="l7">}</span></pre>
+        </div>
+
+        <div class="panel stack-highlight">
+            <h3>Active Call Stack & Trace</h3>
+            <div class="status-box">
+                <div id="actionDescription">Press "Next Step ➔" to start stepping through execution.</div>
+                <div class="stack-list" id="stackContainer"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h3>Visual Tree State</h3>
+            <div class="visual-area" id="visualArea">
+                <svg id="treeSvg"></svg>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let nodesArray = [];
+        let steps = [];
+        let currentStepIndex = 0;
+
+        const width = 500;
+        const height = 450;
+        const startY = 50;
+        const rowHeight = 90;
+
+        function initSimulation() {
+            const inputVal = document.getElementById('arrayInput').value;
+            nodesArray = inputVal.split(',').map(x => x.trim()).filter(x => x !== "").map(Number);
+            if(nodesArray.length === 0 || nodesArray.some(isNaN)) {
+                alert("Please enter a valid comma-separated array of numbers!");
+                return;
+            }
+
+            steps = [];
+            currentStepIndex = 0;
+            
+            // Build the execution step history
+            generateSteps(0, [], null, null);
+
+            document.getElementById('nextBtn').disabled = false;
+            renderStep();
+        }
+
+        // Generates detailed recursive trace, recording the caller index and branch side
+        function generateSteps(i, stack, parentIdx, branchSide) {
+            let currentStack = [...stack, i];
+            let valStr = i < nodesArray.length ? `${nodesArray[i]}` : "NULL";
+
+            // Step 1: Base Case check
+            steps.push({ 
+                line: 2, 
+                index: i, 
+                stack: [...currentStack], 
+                type: 'check', 
+                desc: `Checking index <b>i = ${i}</b> to see if it is out of bounds.` 
+            });
+
+            if (i >= nodesArray.length) {
+                let returnToDesc = "";
+                if (parentIdx !== null) {
+                    let parentVal = nodesArray[parentIdx];
+                    returnToDesc = `Returning <b>nullptr</b> up to <b>root->${branchSide}</b> of Node (value: ${parentVal}, index: ${parentIdx}).`;
+                } else {
+                    returnToDesc = `Returning <b>nullptr</b> directly to main caller.`;
+                }
+
+                steps.push({ 
+                    line: 2, 
+                    index: i, 
+                    stack: [...stack], 
+                    type: 'null-return', 
+                    desc: `Index <b>i = ${i}</b> is out of bounds (size limit: ${nodesArray.length}). <br><br>🚨 ${returnToDesc}` 
+                });
+                return null;
+            }
+
+            // Step 2: Node Creation
+            steps.push({ 
+                line: 3, 
+                index: i, 
+                stack: [...currentStack], 
+                type: 'create', 
+                desc: `Allocated new <b>Node(${valStr})</b> in memory at index <b>${i}</b>.` 
+            });
+
+            // Step 3: Recurse Left
+            steps.push({ 
+                line: 4, 
+                index: i, 
+                stack: [...currentStack], 
+                type: 'go-left', 
+                desc: `We pause Node(${valStr}) to resolve its left child. <br>Calling <code>buildTreeHelper(nodes, ${2*i+1})</code>.` 
+            });
+            generateSteps(2 * i + 1, currentStack, i, 'left');
+
+            // Step 4: Recurse Right
+            steps.push({ 
+                line: 5, 
+                index: i, 
+                stack: [...currentStack], 
+                type: 'go-right', 
+                desc: `We pause Node(${valStr}) to resolve its right child. <br>Calling <code>buildTreeHelper(nodes, ${2*i+2})</code>.` 
+            });
+            generateSteps(2 * i + 2, currentStack, i, 'right');
+
+            // Step 5: Returning Node
+            let parentReturnDesc = "";
+            if (parentIdx !== null) {
+                let parentVal = nodesArray[parentIdx];
+                parentReturnDesc = `Returning <b>Node(${valStr})</b> up to fill the <b>root->${branchSide}</b> connection of Node (value: ${parentVal}, index: ${parentIdx}).`;
+            } else {
+                parentReturnDesc = `Finished tree building! Returning the Root Node <b>Node(${valStr})</b> back to the <code>buildTree</code> main function.`;
+            }
+
+            steps.push({ 
+                line: 6, 
+                index: i, 
+                stack: [...stack], 
+                type: 'return', 
+                desc: `✅ ${parentReturnDesc}` 
+            });
+        }
+
+        function stepForward() {
+            if (currentStepIndex < steps.length - 1) {
+                currentStepIndex++;
+                renderStep();
+            } else {
+                document.getElementById('nextBtn').disabled = true;
+                document.getElementById('actionDescription').innerHTML = "🏁 <b>Execution completed! Your binary tree is fully formed!</b>";
+            }
+        }
+
+        function renderStep() {
+            const step = steps[currentStepIndex];
+            
+            // 1. Line Highlighting
+            document.querySelectorAll('.line').forEach(el => el.classList.remove('highlight'));
+            const activeLine = document.getElementById(`l${step.line}`);
+            if(activeLine) activeLine.classList.add('highlight');
+
+            // 2. Describe Step State
+            document.getElementById('actionDescription').innerHTML = step.desc;
+
+            // 3. Render Call Stack Frame
+            const stackContainer = document.getElementById('stackContainer');
+            stackContainer.innerHTML = '';
+            for(let j = step.stack.length - 1; j >= 0; j--) {
+                const idx = step.stack[j];
+                const isCurrentExecuting = (j === step.stack.length - 1);
+                const valStr = idx < nodesArray.length ? `[Node Val: ${nodesArray[idx]}]` : `[Out of Bounds]`;
+                
+                let frameClass = isCurrentExecuting ? "stack-frame active-frame" : "stack-frame";
+                let statusBadge = isCurrentExecuting ? "⚡ RUNNING" : "⏸️ PAUSED (Waiting)";
+
+                stackContainer.innerHTML += `
+                    <div class="${frameClass}">
+                        <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                            <strong>buildTreeHelper(i = ${idx})</strong>
+                            <small>${statusBadge}</small>
+                        </div>
+                        <div style="font-size:11px; color:#566573;">
+                            Parameters & Context: nodesArray index [${idx}] ${valStr}
+                        </div>
+                    </div>`;
+            }
+
+            // 4. Draw Binary Tree
+            drawTree(step);
+        }
+
+        function getCoordinates(i) {
+            if (i === 0) return { x: width / 2, y: startY };
+            const parentIdx = Math.floor((i - 1) / 2);
+            const parentCoords = getCoordinates(parentIdx);
+            const depth = Math.floor(Math.log2(i + 1));
+            const spread = width / Math.pow(2, depth + 1);
+            
+            const isLeft = (i % 2 !== 0);
+            const x = isLeft ? parentCoords.x - spread : parentCoords.x + spread;
+            const y = startY + (depth * rowHeight);
+            return { x, y };
+        }
+
+        function drawTree(currentStep) {
+            const svg = document.getElementById('treeSvg');
+            svg.innerHTML = ''; 
+
+            let nodeStates = {}; 
+            for(let k = 0; k <= currentStepIndex; k++) {
+                let s = steps[k];
+                if (s.index < nodesArray.length) {
+                    if(s.type === 'create') nodeStates[s.index] = 'created';
+                } else if (s.type === 'null-return') {
+                    nodeStates[s.index] = 'null-node';
+                }
+            }
+            if(currentStep.index !== undefined) {
+                nodeStates[currentStep.index] = currentStep.type === 'null-return' ? 'null-node' : 'active';
+            }
+
+            // Edges
+            for(let i = 0; i < nodesArray.length; i++) {
+                const leftChild = 2 * i + 1;
+                const rightChild = 2 * i + 2;
+                const parentCoords = getCoordinates(i);
+
+                if(leftChild <= nodesArray.length && nodeStates[i]) {
+                     if(leftChild < nodesArray.length || nodeStates[leftChild] === 'null-node') {
+                         const childCoords = getCoordinates(leftChild);
+                         svg.innerHTML += `<line class="tree-edge" x1="${parentCoords.x}" y1="${parentCoords.y}" x2="${childCoords.x}" y2="${childCoords.y}" />`;
+                     }
+                }
+                if(rightChild <= nodesArray.length && nodeStates[i]) {
+                     if(rightChild < nodesArray.length || nodeStates[rightChild] === 'null-node') {
+                         const childCoords = getCoordinates(rightChild);
+                         svg.innerHTML += `<line class="tree-edge" x1="${parentCoords.x}" y1="${parentCoords.y}" x2="${childCoords.x}" y2="${childCoords.y}" />`;
+                     }
+                }
+            }
+
+            // Nodes
+            Object.keys(nodeStates).forEach(idxStr => {
+                const idx = parseInt(idxStr);
+                const state = nodeStates[idx];
+                const coords = getCoordinates(idx);
+                let label = idx < nodesArray.length ? nodesArray[idx] : "NULL";
+
+                let circleClass = "node-circle";
+                if(state === 'active') circleClass += " active";
+                if(state === 'created') circleClass += " created";
+                if(state === 'null-node') circleClass += " null-node";
+
+                svg.innerHTML += `
+                    <circle class="${circleClass}" cx="${coords.x}" cy="${coords.y}" r="20" />
+                    <text class="node-text" x="${coords.x}" y="${coords.y}">${label}</text>
+                `;
+            });
+        }
+
+        window.onload = initSimulation;
+    </script>
+</body>
+</html>
