@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Binary Tree Traversal & Call Stack Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            --text-color: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-yellow: #facc15;
+            --code-highlight: rgba(56, 189, 248, 0.2);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 1.8rem;
+        }
+
+        .controls {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 15px 25px;
+            border-radius: 8px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 1200px;
+            flex-wrap: wrap;
+        }
+
+        label {
+            font-weight: 500;
+            color: var(--text-dim);
+        }
+
+        select {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            outline: none;
+        }
+
+        button {
+            background: var(--accent-blue);
+            color: var(--bg-color);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background: var(--border-color);
+            color: var(--text-dim);
+            cursor: not-allowed;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+            height: 550px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        /* Tree Visualization */
+        .tree-container {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node-circle {
+            fill: #334155;
+            stroke: var(--border-color);
+            stroke-width: 2;
+            transition: all 0.3s ease;
+        }
+
+        .node-circle.active {
+            fill: var(--bg-color);
+            stroke: var(--accent-yellow);
+            stroke-width: 4;
+        }
+
+        .node-circle.processed {
+            fill: var(--accent-green);
+            stroke: #166534;
+        }
+
+        .node-text {
+            fill: var(--text-color);
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .node-text.active {
+            fill: var(--accent-yellow);
+        }
+
+        .node-text.processed {
+            fill: #052e16;
+        }
+
+        .tree-edge {
+            stroke: var(--border-color);
+            stroke-width: 2;
+            transition: stroke 0.3s;
+        }
+
+        /* Code Display */
+        pre {
+            background: #0b0f19;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            flex-grow: 1;
+        }
+
+        .code-line {
+            display: block;
+            padding: 0 4px;
+            border-radius: 2px;
+        }
+
+        .code-line.highlight {
+            background-color: var(--code-highlight);
+            border-left: 3px solid var(--accent-blue);
+            color: #ffffff;
+        }
+
+        /* Stack Visualizer */
+        .stack-wrapper {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column-reverse;
+            justify-content: flex-start;
+            gap: 6px;
+            overflow-y: auto;
+            border: 2px dashed var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            background: #0b0f19;
+        }
+
+        .stack-frame {
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-blue);
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.85rem;
+            animation: pushAnim 0.2s ease-out;
+            color: var(--accent-blue);
+            font-family: monospace;
+        }
+
+        @keyframes pushAnim {
+            from { transform: translateY(-20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        /* Output Tracking */
+        .output-panel {
+            width: 100%;
+            max-width: 1200px;
+            margin-top: 20px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .output-array {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+            min-height: 40px;
+            align-items: center;
+        }
+
+        .output-element {
+            background: var(--accent-green);
+            color: #052e16;
+            font-weight: bold;
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            animation: popAnim 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popAnim {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Binary Tree Traversal & Call Stack Trace</h1>
+
+    <div class="controls">
+        <div>
+            <label for="traversalSelect">Choose Traversal: </label>
+            <select id="traversalSelect">
+                <option value="preorder">Preorder (Root -> Left -> Right)</option>
+                <option value="inorder">Inorder (Left -> Root -> Right)</option>
+                <option value="postorder">Postorder (Left -> Right -> Root)</option>
+            </select>
+        </div>
+        <button id="resetBtn">Reset</button>
+        <button id="stepBtn">Step Forward →</button>
+        <div style="margin-left: auto; color: var(--text-dim); font-size: 0.9rem;" id="statusMsg">
+            Click Step Forward to begin execution tracing.
+        </div>
+    </div>
+
+    <div class="dashboard">
+        <!-- Tree Graphic Panel -->
+        <div class="panel">
+            <div class="panel-title">Binary Tree</div>
+            <div class="tree-container">
+                <svg id="treeSvg" viewBox="0 0 400 300">
+                    <!-- Dynamic lines & circles injected via JS -->
+                </svg>
+            </div>
+        </div>
+
+        <!-- Code Execution Tracer Panel -->
+        <div class="panel">
+            <div class="panel-title">Active Call Stack Trace</div>
+            <div id="codeDisplay">
+                <pre><code id="codeBlock"></code></pre>
+            </div>
+        </div>
+
+        <!-- Call Stack Graphic Panel -->
+        <div class="panel">
+            <div class="panel-title">Recursive Call Stack</div>
+            <div class="stack-wrapper" id="stackWrapper">
+                <!-- Stack frames populate here dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Output Array Tracking Footer -->
+    <div class="output-panel">
+        <div class="panel-title" style="margin-bottom: 5px;">Result Array (Final Output)</div>
+        <div class="output-array" id="outputArray"></div>
+    </div>
+
+    <script>
+        // Definition of our hardcoded demonstration tree
+        const treeData = {
+            id: 1, val: 1, x: 200, y: 50,
+            left: {
+                id: 2, val: 2, x: 100, y: 130,
+                left: { id: 4, val: 4, x: 50, y: 220, left: null, right: null },
+                right: { id: 5, val: 5, x: 150, y: 220, left: null, right: null }
+            },
+            right: {
+                id: 3, val: 3, x: 300, y: 130,
+                left: { id: 6, val: 6, x: 250, y: 220, left: null, right: null },
+                right: { id: 7, val: 7, x: 350, y: 220, left: null, right: null }
+            }
+        };
+
+        // Templates matching standard C++ structure for highlight operations
+        const codeTemplates = {
+            preorder: [
+`void traverse(TreeNode* root) {`,
+`    if (root == nullptr) return;`,
+`    final.push_back(root->val);`,
+`    traverse(root->left);`,
+`    traverse(root->right);`,
+`}`
+            ],
+            inorder: [
+`void traverse(TreeNode* root) {`,
+`    if (root == nullptr) return;`,
+`    traverse(root->left);`,
+`    final.push_back(root->val);`,
+`    traverse(root->right);`,
+`}`
+            ],
+            postorder: [
+`void traverse(TreeNode* root) {`,
+`    if (root == nullptr) return;`,
+`    traverse(root->left);`,
+`    traverse(root->right);`,
+`    final.push_back(root->val);`,
+`}`
+            ]
+        };
+
+        let currentSteps = [];
+        let currentStepIndex = -1;
+
+        // --- Step Machine Generation ---
+        // Generates the linear order of execution discrete states matching structural processing lines
+        function generateSteps(type, root) {
+            const steps = [];
+            
+            function recurse(node) {
+                // Stack Frame Frame push event simulation
+                steps.push({ line: 0, node: node, action: 'enter', stack: [node?.val].filter(Boolean) });
+
+                if (node === null) {
+                    steps.push({ line: 1, node: null, action: 'nullcheck', stack: [] });
+                    return;
+                }
+
+                steps.push({ line: 1, node: node, action: 'nullcheck', stack: [] });
+
+                if (type === 'preorder') {
+                    steps.push({ line: 2, node: node, action: 'push_output', value: node.val });
+                    steps.push({ line: 3, node: node, action: 'call_left' });
+                    recurse(node.left);
+                    steps.push({ line: 4, node: node, action: 'call_right' });
+                    recurse(node.right);
+                } else if (type === 'inorder') {
+                    steps.push({ line: 2, node: node, action: 'call_left' });
+                    recurse(node.left);
+                    steps.push({ line: 3, node: node, action: 'push_output', value: node.val });
+                    steps.push({ line: 4, node: node, action: 'call_right' });
+                    recurse(node.right);
+                } else if (type === 'postorder') {
+                    steps.push({ line: 2, node: node, action: 'call_left' });
+                    recurse(node.left);
+                    steps.push({ line: 3, node: node, action: 'call_right' });
+                    recurse(node.right);
+                    steps.push({ line: 4, node: node, action: 'push_output', value: node.val });
+                }
+
+                // Node context tracking complete, frame pop
+                steps.push({ line: 5, node: node, action: 'exit' });
+            }
+
+            recurse(root);
+            return steps;
+        }
+
+        // --- DOM Elements ---
+        const svg = document.getElementById('treeSvg');
+        const codeBlock = document.getElementById('codeBlock');
+        const stackWrapper = document.getElementById('stackWrapper');
+        const outputArray = document.getElementById('outputArray');
+        const traversalSelect = document.getElementById('traversalSelect');
+        const stepBtn = document.getElementById('stepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMsg = document.getElementById('statusMsg');
+
+        // Render static layout elements of SVG tree framework
+        function renderTreeStructure(node) {
+            if (!node) return;
+            if (node.left) {
+                svg.innerHTML += `<line class="tree-edge" id="edge-${node.id}-${node.left.id}" x1="${node.x}" y1="${node.y}" x2="${node.left.x}" y2="${node.left.y}"/>`;
+                renderTreeStructure(node.left);
+            }
+            if (node.right) {
+                svg.innerHTML += `<line class="tree-edge" id="edge-${node.id}-${node.right.id}" x1="${node.x}" y1="${node.y}" x2="${node.right.x}" y2="${node.right.y}"/>`;
+                renderTreeStructure(node.right);
+            }
+            svg.innerHTML += `
+                <g id="node-group-${node.id}">
+                    <circle class="node-circle" id="circle-${node.id}" cx="${node.x}" cy="${node.y}" r="18"/>
+                    <text class="node-text" id="text-${node.id}" x="${node.x}" y="${node.y}">${node.val}</text>
+                </g>
+            `;
+        }
+
+        function loadCodeSnippet(type) {
+            codeBlock.innerHTML = codeTemplates[type].map((line, index) => {
+                return `<span class="code-line" id="line-${index}">${line}</span>`;
+            }).join('');
+        }
+
+        function setupSimulation() {
+            svg.innerHTML = '';
+            renderTreeStructure(treeData);
+            const type = traversalSelect.value;
+            loadCodeSnippet(type);
+            currentSteps = generateSteps(type, treeData);
+            currentStepIndex = -1;
+            stackWrapper.innerHTML = '';
+            outputArray.innerHTML = '';
+            stepBtn.disabled = false;
+            statusMsg.innerText = "Trace loaded. Click Step Forward.";
+        }
+
+        function renderState(index) {
+            // Clear prior temporary highlights
+            document.querySelectorAll('.code-line').forEach(el => el.classList.remove('highlight'));
+            document.querySelectorAll('.node-circle').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.node-text').forEach(el => el.classList.remove('active'));
+
+            if (index < 0) return;
+
+            const step = currentSteps[index];
+            
+            // Highlight current matching code index line
+            const lineEl = document.getElementById(`line-${step.line}`);
+            if (lineEl) lineEl.classList.add('highlight');
+
+            // Reconstruct runtime stack frame up to current historical point
+            const runningStack = [];
+            const processedNodes = new Set();
+            const outputList = [];
+
+            for (let i = 0; i <= index; i++) {
+                const s = currentSteps[i];
+                if (s.action === 'enter' && s.node) {
+                    runningStack.push(`traverse(node: ${s.node.val})`);
+                }
+                if (s.action === 'exit' && s.node) {
+                    runningStack.pop();
+                    processedNodes.add(s.node.id);
+                }
+                if (s.action === 'push_output') {
+                    outputList.push(s.value);
+                }
+            }
+
+            // Update UI Call stack visuals mapping runningStack array state
+            stackWrapper.innerHTML = runningStack.map(frame => `<div class="stack-frame">${frame}</div>`).join('');
+
+            // Apply processed green color states vs active node yellow states
+            document.querySelectorAll('.node-circle').forEach(circle => {
+                const id = parseInt(circle.id.split('-')[1]);
+                if (processedNodes.has(id)) {
+                    circle.className.baseVal = "node-circle processed";
+                    document.getElementById(`text-${id}`).className.baseVal = "node-text processed";
+                } else {
+                    circle.className.baseVal = "node-circle";
+                    document.getElementById(`text-${id}`).className.baseVal = "node-text";
+                }
+            });
+
+            if (step.node) {
+                const activeCircle = document.getElementById(`circle-${step.node.id}`);
+                const activeText = document.getElementById(`text-${step.node.id}`);
+                if (activeCircle && !processedNodes.has(step.node.id)) {
+                    activeCircle.className.baseVal = "node-circle active";
+                    activeText.className.baseVal = "node-text active";
+                }
+            }
+
+            // Output array sync loop
+            outputArray.innerHTML = outputList.map(val => `<div class="output-element">${val}</div>`).join('');
+
+            // Informational logging text strings updates
+            if (step.action === 'enter' && step.node) {
+                statusMsg.innerText = `Pushing traverse(node: ${step.node.val}) onto Stack.`;
+            } else if (step.action === 'nullcheck' && step.node === null) {
+                statusMsg.innerText = `Hit null pointer base case. Returning back up.`;
+            } else if (step.action === 'push_output') {
+                statusMsg.innerText = `Adding node ${step.value} to output array.`;
+            } else if (step.action === 'exit' && step.node) {
+                statusMsg.innerText = `Popping traverse(node: ${step.node.val}) off Stack.`;
+            } else if (step.action === 'call_left') {
+                statusMsg.innerText = `Moving down left subtree of Node ${step.node.val}.`;
+            } else if (step.action === 'call_right') {
+                statusMsg.innerText = `Moving down right subtree of Node ${step.node.val}.`;
+            }
+        }
+
+        // --- Event Listeners ---
+        stepBtn.addEventListener('click', () => {
+            if (currentStepIndex < currentSteps.length - 1) {
+                currentStepIndex++;
+                renderState(currentStepIndex);
+            } else {
+                stepBtn.disabled = true;
+                statusMsg.innerText = "Execution Trace Complete!";
+            }
+        });
+
+        resetBtn.addEventListener('click', setupSimulation);
+        traversalSelect.addEventListener('change', setupSimulation);
+
+        // Initialize display configuration on launch load
+        setupSimulation();
+    </script>
+</body>
+</html>
