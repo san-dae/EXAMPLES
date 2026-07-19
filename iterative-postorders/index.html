@@ -1,0 +1,813 @@
+import base64
+
+html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iterative Postorder Traversal Deep Dive</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: #1e293b;
+            --border-color: #334155;
+            --text-color: #f8fafc;
+            --text-dim: #94a3b8;
+            --accent-blue: #38bdf8;
+            --accent-purple: #c084fc;
+            --accent-green: #4ade80;
+            --accent-yellow: #facc15;
+            --code-highlight: rgba(56, 189, 248, 0.15);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            padding: 20px;
+            display: block;
+            min-height: 100vh;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 15px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: var(--text-color);
+            font-weight: 700;
+        }
+
+        p.subtitle {
+            color: var(--text-dim);
+            margin-top: 5px;
+            font-size: 1rem;
+        }
+
+        .controls {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            padding: 20px;
+            border-radius: 8px;
+            display: table;
+            width: 100%;
+            margin-bottom: 25px;
+        }
+
+        .control-row {
+            display: table-row;
+        }
+
+        .control-cell {
+            display: table-cell;
+            vertical-align: middle;
+            padding: 0 15px;
+        }
+
+        label {
+            font-weight: 600;
+            color: var(--text-color);
+            margin-right: 10px;
+        }
+
+        select {
+            background: var(--bg-color);
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            padding: 10px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            outline: none;
+            width: 280px;
+        }
+
+        .btn-group {
+            display: inline-block;
+        }
+
+        button {
+            background: var(--accent-blue);
+            color: var(--bg-color);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.95rem;
+            margin-right: 10px;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:disabled {
+            background: var(--border-color);
+            color: var(--text-dim);
+            cursor: not-allowed;
+        }
+
+        #statusMsg {
+            color: var(--accent-yellow);
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+
+        /* 3-Column Layout using table-cell for reliability */
+        .workspace {
+            display: table;
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: separate;
+            border-spacing: 20px 0;
+        }
+
+        .column {
+            display: table-cell;
+            vertical-align: top;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+            height: 520px;
+        }
+
+        .panel-title {
+            font-size: 0.95rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-dim);
+            margin-bottom: 15px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+            font-weight: 600;
+        }
+
+        /* Visualizing the Tree */
+        .tree-container {
+            height: 440px;
+            display: block;
+            text-align: center;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node-circle {
+            fill: #334155;
+            stroke: var(--border-color);
+            stroke-width: 2;
+            transition: all 0.25s ease;
+        }
+
+        .node-circle.active {
+            fill: var(--bg-color);
+            stroke: var(--accent-yellow);
+            stroke-width: 4;
+        }
+
+        .node-circle.peeked {
+            fill: var(--bg-color);
+            stroke: var(--accent-purple);
+            stroke-width: 3;
+        }
+
+        .node-circle.processed {
+            fill: var(--accent-green);
+            stroke: #166534;
+        }
+
+        .node-text {
+            fill: var(--text-color);
+            font-size: 14px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+
+        .node-text.processed {
+            fill: #052e16;
+        }
+
+        .tree-edge {
+            stroke: var(--border-color);
+            stroke-width: 2;
+            transition: stroke 0.25s;
+        }
+
+        /* Code Blocks */
+        pre {
+            background: #070a12;
+            padding: 15px;
+            border-radius: 6px;
+            overflow: auto;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            height: 440px;
+        }
+
+        .code-line {
+            display: block;
+            padding: 0 6px;
+            border-radius: 3px;
+            color: #cbd5e1;
+            white-space: pre;
+        }
+
+        .code-line.highlight {
+            background-color: var(--code-highlight);
+            border-left: 3px solid var(--accent-blue);
+            color: #ffffff;
+            font-weight: 500;
+        }
+
+        /* Stack Visualizer */
+        .stacks-container {
+            height: 440px;
+            display: block;
+            overflow-y: auto;
+        }
+
+        .stack-box {
+            background: #070a12;
+            border: 2px dashed var(--border-color);
+            border-radius: 6px;
+            padding: 12px;
+            min-height: 190px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column-reverse;
+            gap: 6px;
+        }
+
+        .stack-box-title {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+            margin-bottom: 5px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .stack-frame {
+            background: var(--panel-bg);
+            border: 1px solid var(--accent-blue);
+            padding: 8px;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--accent-blue);
+            font-family: monospace;
+            font-weight: bold;
+        }
+
+        .stack-frame.purple {
+            border-color: var(--accent-purple);
+            color: var(--accent-purple);
+        }
+
+        /* Results Footer */
+        .results-panel {
+            margin-top: 25px;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 20px;
+        }
+
+        .output-row {
+            display: table;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        .output-cell {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .output-label {
+            width: 140px;
+            font-weight: 600;
+            color: var(--text-dim);
+            font-size: 0.9rem;
+        }
+
+        .array-container {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-height: 40px;
+            align-items: center;
+        }
+
+        .array-el {
+            background: var(--accent-green);
+            color: #052e16;
+            font-weight: bold;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            font-size: 0.95rem;
+        }
+
+        .array-el.reversed {
+            background: #15803d;
+            color: #ffffff;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Iterative Postorder Traversal Deep Dive</h1>
+        <p class="subtitle">Simulating and comparing the three core paradigms of manual stack Postorder tree processing</p>
+    </header>
+
+    <div class="controls">
+        <div class="control-row">
+            <div class="control-cell">
+                <label for="algoSelect">Strategy:</label>
+                <select id="algoSelect">
+                    <option value="reverse">1 Stack + std::reverse() Trick</option>
+                    <option value="twostack">2 Stacks Approach</option>
+                    <option value="onestack">1 Stack Traditional (Direct)</option>
+                </select>
+            </div>
+            <div class="control-cell">
+                <div class="btn-group">
+                    <button id="resetBtn">Reset</button>
+                    <button id="stepBtn">Step Forward →</button>
+                </div>
+            </div>
+            <div class="control-cell" style="width: 40%;">
+                <div id="statusMsg">Select an architecture strategy and step forward.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="workspace">
+        <!-- Column 1: Tree Graph -->
+        <div class="column">
+            <div class="panel-title">Target Binary Tree</div>
+            <div class="tree-container">
+                <svg id="treeSvg" viewBox="0 0 400 300"></svg>
+            </div>
+        </div>
+
+        <!-- Column 2: C++ Engine Code -->
+        <div class="column">
+            <div class="panel-title">Execution Context (C++)</div>
+            <pre><code id="codeBlock"></code></pre>
+        </div>
+
+        <!-- Column 3: Stack Arrays Layout -->
+        <div class="column">
+            <div class="panel-title">Memory Allocation</div>
+            <div class="stacks-container">
+                <div id="stack1Title" class="stack-box-title">Stack 1 (st)</div>
+                <div class="stack-box" id="stack1Box"></div>
+                
+                <div id="stack2Title" class="stack-box-title" style="display:none;">Stack 2 (st2)</div>
+                <div class="stack-box" id="stack2Box" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="results-panel">
+        <div class="panel-title" style="margin-bottom: 5px;">Output Buffers</div>
+        <div class="output-row" style="margin-bottom: 10px;">
+            <div class="output-cell output-label">Vector 'final':</div>
+            <div class="output-cell">
+                <div class="array-container" id="finalVector"></div>
+            </div>
+        </div>
+        <div class="output-row" id="reversedRow" style="display:none;">
+            <div class="output-cell output-label">After reverse():</div>
+            <div class="output-cell">
+                <div class="array-container" id="reversedVector"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Standard structural demonstration tree layout matrix
+        const treeData = {
+            id: 1, val: 1, x: 200, y: 50,
+            left: {
+                id: 2, val: 2, x: 100, y: 130,
+                left: { id: 4, val: 4, x: 50, y: 220, left: null, right: null },
+                right: { id: 5, val: 5, x: 150, y: 220, left: null, right: null }
+            },
+            right: {
+                id: 3, val: 3, x: 300, y: 130,
+                left: { id: 6, val: 6, x: 250, y: 220, left: null, right: null },
+                right: { id: 7, val: 7, x: 350, y: 220, left: null, right: null }
+            }
+        };
+
+        const codes = {
+            reverse: [
+`vector<int> postorderTraversal(TreeNode* root) {`,
+`    vector<int> final;`,
+`    if (root == nullptr) return final;`,
+`    stack<TreeNode*> st;`,
+`    st.push(root);`,
+`    while (!st.empty()) {`,
+`        TreeNode* curr = st.top(); st.pop();`,
+`        final.push_back(curr->val);`,
+`        if (curr->left != nullptr) st.push(curr->left);`,
+`        if (curr->right != nullptr) st.push(curr->right);`,
+`    }`,
+`    reverse(final.begin(), final.end());`,
+`    return final;`,
+`}`
+            ],
+            twostack: [
+`vector<int> postorderTraversal(TreeNode* root) {`,
+`    vector<int> final;`,
+`    if (root == nullptr) return final;`,
+`    stack<TreeNode*> st1; stack<TreeNode*> st2;`,
+`    st1.push(root);`,
+`    while (!st1.empty()) {`,
+`        TreeNode* curr = st1.top(); st1.pop();`,
+`        st2.push(curr);`,
+`        if (curr->left != nullptr) st1.push(curr->left);`,
+`        if (curr->right != nullptr) st1.push(curr->right);`,
+`    }`,
+`    while (!st2.empty()) {`,
+`        final.push_back(st2.top()->val);`,
+`        st2.pop();`,
+`    }`,
+`    return final;`,
+`}`
+            ],
+            onestack: [
+`vector<int> postorderTraversal(TreeNode* root) {`,
+`    vector<int> final; stack<TreeNode*> st;`,
+`    TreeNode* curr = root; TreeNode* lastVisited = nullptr;`,
+`    while (curr != nullptr || !st.empty()) {`,
+`        while (curr != nullptr) {`,
+`            st.push(curr);`,
+`            curr = curr->left;`,
+`        }`,
+`        TreeNode* peekNode = st.top();`,
+`        if (peekNode->right != nullptr && lastVisited != peekNode->right) {`,
+`            curr = peekNode->right;`,
+`        } else {`,
+`            final.push_back(peekNode->val);`,
+`            lastVisited = peekNode;`,
+`            st.pop();`,
+`        }`,
+`    }`,
+`    return final;`,
+`}`
+            ]
+        };
+
+        let steps = [];
+        let currentIdx = -1;
+
+        // --- Step State Generator Functions ---
+        function buildReverseSteps(root) {
+            let trace = [];
+            trace.push({ line: 0, msg: "Initialize results array.", st1: [], final: [], activeNode: null });
+            trace.push({ line: 1, msg: "Declare final return container vector.", st1: [], final: [] });
+            trace.push({ line: 2, msg: "Check if tree is null.", st1: [], final: [] });
+            trace.push({ line: 3, msg: "Instantiate traversal execution stack.", st1: [], final: [] });
+            trace.push({ line: 4, msg: "Push root node into stack.", st1: [1], final: [] });
+
+            let st = [root];
+            let fin = [];
+
+            while (st.length > 0) {
+                trace.push({ line: 5, msg: "Loop boundary evaluation. Check if stack is empty.", st1: [...st], final: [...fin] });
+                
+                let curr = st.pop();
+                trace.push({ line: 6, msg: `Pop top node (${curr.val}) from stack to read content.`, st1: [...st], final: [...fin], activeNode: curr.id });
+                
+                fin.push(curr.val);
+                trace.push({ line: 7, msg: `Append node value ${curr.val} to output buffer.`, st1: [...st], final: [...fin], activeNode: curr.id });
+
+                if (curr.left) {
+                    st.push(curr.left);
+                    trace.push({ line: 8, msg: `Left child exists. Push node ${curr.left.val} to stack.`, st1: [...st], final: [...fin], activeNode: curr.id });
+                } else {
+                    trace.push({ line: 8, msg: "Left child is null, no stack insertion.", st1: [...st], final: [...fin], activeNode: curr.id });
+                }
+
+                if (curr.right) {
+                    st.push(curr.right);
+                    trace.push({ line: 9, msg: `Right child exists. Push node ${curr.right.val} to stack.`, st1: [...st], final: [...fin], activeNode: curr.id });
+                } else {
+                    trace.push({ line: 9, msg: "Right child is null, no stack insertion.", st1: [...st], final: [...fin], activeNode: curr.id });
+                }
+            }
+            
+            trace.push({ line: 5, msg: "Stack 1 is now empty. Drop out of traversal loop.", st1: [], final: [...fin] });
+            
+            let reversed = [...fin].reverse();
+            trace.push({ line: 11, msg: "Execute std::reverse() over final vector mapping sequence into proper order.", st1: [], final: [...fin], showRev: true, revVal: reversed });
+            trace.push({ line: 12, msg: "Return complete array output matrix.", st1: [], final: [...fin], showRev: true, revVal: reversed });
+            return trace;
+        }
+
+        function buildTwoStackSteps(root) {
+            let trace = [];
+            trace.push({ line: 0, msg: "Initialize stack visualizer environment.", st1: [], st2: [], final: [] });
+            trace.push({ line: 1, msg: "Create final tracking storage vector array.", st1: [], st2: [], final: [] });
+            trace.push({ line: 2, msg: "Verify base structural constraints.", st1: [], st2: [], final: [] });
+            trace.push({ line: 3, msg: "Instantiate Stack 1 and Stack 2 structures.", st1: [], st2: [], final: [] });
+            trace.push({ line: 4, msg: "Push root node into structural Stack 1.", st1: [1], st2: [], final: [] });
+
+            let st1 = [root];
+            let st2 = [];
+            let fin = [];
+
+            while (st1.length > 0) {
+                trace.push({ line: 5, msg: "Check loop condition: Is Stack 1 empty?", st1: [...st1], st2: [...st2], final: [...fin] });
+                
+                let curr = st1.pop();
+                trace.push({ line: 6, msg: `Pop node ${curr.val} off Stack 1.`, st1: [...st1], st2: [...st2], final: [...fin], activeNode: curr.id });
+                
+                st2.push(curr);
+                trace.push({ line: 7, msg: `Transfer node ${curr.val} straight onto processing history Stack 2.`, st1: [...st1], st2: [...st2], final: [...fin], activeNode: curr.id });
+
+                if (curr.left) {
+                    st1.push(curr.left);
+                    trace.push({ line: 8, msg: `Push left child (${curr.left.val}) into Stack 1.`, st1: [...st1], st2: [...st2], final: [...fin], activeNode: curr.id });
+                } else {
+                    trace.push({ line: 8, msg: "Left child is null, bypass insertion.", st1: [...st1], st2: [...st2], final: [...fin], activeNode: curr.id });
+                }
+
+                if (curr.right) {
+                    st1.push(curr.right);
+                    trace.push({ line: 9, msg: `Push right child (${curr.right.val}) into Stack 1.`, st1: [...st1], st2: [...st2], final: [...fin], activeNode: curr.id });
+                } else {
+                    trace.push({ line: 9, msg: "Right child is null, bypass insertion.", st1: [...st1], st2: [...st2], final: [...fin], activeNode: curr.id });
+                }
+            }
+
+            trace.push({ line: 5, msg: "Stack 1 is completely clear. Drop into collection sequence phase.", st1: [], st2: [...st2], final: [] });
+
+            while (st2.length > 0) {
+                trace.push({ line: 11, msg: "Evaluate structural container: Is Stack 2 empty?", st1: [], st2: [...st2], final: [...fin] });
+                let curr = st2.pop();
+                trace.push({ line: 12, msg: `Pop top node ${curr.val} out of stack 2 and read structural value.`, st1: [], st2: [...st2], final: [...fin], activeNode: curr.id });
+                fin.push(curr.val);
+                trace.push({ line: 13, msg: `Push value ${curr.val} into final vector array.`, st1: [], st2: [...st2], final: [...fin], processedNode: curr.id });
+            }
+
+            trace.push({ line: 11, msg: "Stack 2 empty. Subroutine termination conditions fulfilled.", st1: [], st2: [], final: [...fin] });
+            trace.push({ line: 15, msg: "Return final elements array list.", st1: [], st2: [], final: [...fin] });
+            return trace;
+        }
+
+        function buildOneStackSteps(root) {
+            let trace = [];
+            trace.push({ line: 0, msg: "Initialize variables.", st1: [], final: [] });
+            trace.push({ line: 1, msg: "Setup final storage array tracking system vector.", st1: [], final: [] });
+            trace.push({ line: 2, msg: "Set curr pointer to root node, and track lastVisited as null.", st1: [], final: [] });
+
+            let st = [];
+            let fin = [];
+            let curr = root;
+            let lastVisited = null;
+
+            while (curr !== null || st.length > 0) {
+                trace.push({ 
+                    line: 3, 
+                    msg: `Outer check: curr is ${curr ? curr.val : 'nullptr'}, Stack holds ${st.length} item(s).`, 
+                    st1: [...st], final: [...fin], 
+                    activeNode: curr ? curr.id : null 
+                });
+
+                while (curr !== null) {
+                    trace.push({ line: 4, msg: `Inner loop evaluation: Dive left. Node ${curr.val} is valid.`, st1: [...st], final: [...fin], activeNode: curr.id });
+                    st.push(curr);
+                    trace.push({ line: 5, msg: `Push parent node ${curr.val} onto stack.`, st1: [...st], final: [...fin], activeNode: curr.id });
+                    curr = curr.left;
+                    trace.push({ line: 6, msg: `Shift curr left to pointer: ${curr ? curr.val : 'nullptr'}.`, st1: [...st], final: [...fin], activeNode: curr ? curr.id : null });
+                }
+
+                trace.push({ line: 4, msg: "Inner dive loop breaks because curr pointer hit a dead end (nullptr).", st1: [...st], final: [...fin] });
+
+                let peekNode = st[st.length - 1];
+                trace.push({ line: 8, msg: `Peek at stack's top node frame without popping: Node ${peekNode.val}.`, st1: [...st], final: [...fin], peekNode: peekNode.id });
+
+                if (peekNode.right !== null && lastVisited !== peekNode.right) {
+                    trace.push({ 
+                        line: 9, 
+                        msg: `Right child (${peekNode.right.val}) exists and has NOT been visited yet. Turn right!`, 
+                        st1: [...st], final: [...fin], peekNode: peekNode.id 
+                    });
+                    curr = peekNode.right;
+                    trace.push({ line: 10, msg: `Set curr pointer to right child node ${curr.val}.`, st1: [...st], final: [...fin], activeNode: curr.id });
+                } else {
+                    trace.push({ 
+                        line: 9, 
+                        msg: `Right child is either null or was already fully processed. Safe to log this parent node.`, 
+                        st1: [...st], final: [...fin], peekNode: peekNode.id 
+                    });
+                    fin.push(peekNode.val);
+                    trace.push({ line: 12, msg: `Add node ${peekNode.val} value to final output vector buffer.`, st1: [...st], final: [...fin], processedNode: peekNode.id });
+                    
+                    lastVisited = peekNode;
+                    trace.push({ line: 13, msg: `Update lastVisited bookmark tracking variable to Node ${lastVisited.val}.`, st1: [...st], final: [...fin], processedNode: peekNode.id });
+                    
+                    st.pop();
+                    trace.push({ line: 14, msg: `Pop processed node ${peekNode.val} permanently off the stack.`, st1: [...st], final: [...fin] });
+                }
+            }
+
+            trace.push({ line: 3, msg: "All conditions processed cleanly. Stack and node pathways clear.", st1: [], final: [...fin] });
+            trace.push({ line: 17, msg: "Return finished postorder vector array sequence.", st1: [], final: [...fin] });
+            return trace;
+        }
+
+        // --- DOM Selectors ---
+        const svg = document.getElementById('treeSvg');
+        const codeBlock = document.getElementById('codeBlock');
+        const stack1Box = document.getElementById('stack1Box');
+        const stack2Box = document.getElementById('stack2Box');
+        const stack2Title = document.getElementById('stack2Title');
+        const stack1Title = document.getElementById('stack1Title');
+        const finalVector = document.getElementById('finalVector');
+        const reversedVector = document.getElementById('reversedVector');
+        const reversedRow = document.getElementById('reversedRow');
+        const algoSelect = document.getElementById('algoSelect');
+        const stepBtn = document.getElementById('stepBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const statusMsg = document.getElementById('statusMsg');
+
+        function renderTreeStructure(node) {
+            if (!node) return;
+            if (node.left) {
+                svg.innerHTML += `<line class="tree-edge" id="edge-${node.id}-${node.left.id}" x1="${node.x}" y1="${node.y}" x2="${node.left.x}" y2="${node.left.y}"/>`;
+                renderTreeStructure(node.left);
+            }
+            if (node.right) {
+                svg.innerHTML += `<line class="tree-edge" id="edge-${node.id}-${node.right.id}" x1="${node.x}" y1="${node.y}" x2="${node.right.x}" y2="${node.right.y}"/>`;
+                renderTreeStructure(node.right);
+            }
+            svg.innerHTML += `
+                <g id="node-group-${node.id}">
+                    <circle class="node-circle" id="circle-${node.id}" cx="${node.x}" cy="${node.y}" r="16"/>
+                    <text class="node-text" id="text-${node.id}" x="${node.x}" y="${node.y}">${node.val}</text>
+                </g>
+            `;
+        }
+
+        function syncCodeSnippet(type) {
+            codeBlock.innerHTML = codes[type].map((line, index) => {
+                return `<span class="code-line" id="line-${index}">${line}</span>`;
+            }).join('');
+        }
+
+        function runReset() {
+            svg.innerHTML = '';
+            renderTreeStructure(treeData);
+            const algo = algoSelect.value;
+            syncCodeSnippet(algo);
+
+            if (algo === 'reverse') {
+                steps = buildReverseSteps(treeData);
+                stack1Title.innerText = "Stack (st)";
+                stack2Title.style.display = 'none';
+                stack2Box.style.display = 'none';
+                reversedRow.style.display = 'table-row';
+            } else if (algo === 'twostack') {
+                steps = buildTwoStackSteps(treeData);
+                stack1Title.innerText = "Stack 1 (st1)";
+                stack2Title.style.display = 'block';
+                stack2Box.style.display = 'flex';
+                reversedRow.style.display = 'none';
+            } else if (algo === 'onestack') {
+                steps = buildOneStackSteps(treeData);
+                stack1Title.innerText = "Stack (st)";
+                stack2Title.style.display = 'none';
+                stack2Box.style.display = 'none';
+                reversedRow.style.display = 'none';
+            }
+
+            currentIdx = -1;
+            stack1Box.innerHTML = '';
+            stack2Box.innerHTML = '';
+            finalVector.innerHTML = '';
+            reversedVector.innerHTML = '';
+            stepBtn.disabled = false;
+            statusMsg.innerText = "Simulator reset. Click Step Forward to trace execution.";
+            
+            // Clear styles
+            document.querySelectorAll('.node-circle').forEach(c => c.className.baseVal = "node-circle");
+        }
+
+        function updateUIState(idx) {
+            document.querySelectorAll('.code-line').forEach(l => l.classList.remove('highlight'));
+            document.querySelectorAll('.node-circle').forEach(c => c.classList.remove('active', 'peeked'));
+
+            if (idx < 0 || idx >= steps.length) return;
+
+            const step = steps[idx];
+            
+            // Highlight current execution pointer
+            const currentLine = document.getElementById(`line-${step.line}`);
+            if (currentLine) currentLine.classList.add('highlight');
+
+            // Set status textual details
+            statusMsg.innerText = step.msg;
+
+            // Render Stack 1 visual states elements arrays mapping
+            if (step.st1) {
+                stack1Box.innerHTML = step.st1.map(val => `<div class="stack-frame">node: ${val}</div>`).join('');
+            }
+
+            // Render Stack 2 visual states if strategy selection dictates it
+            if (algoSelect.value === 'twostack' && step.st2) {
+                stack2Box.innerHTML = step.st2.map(val => `<div class="stack-frame purple">node: ${val.val}</div>`).join('');
+            }
+
+            // Update main outputs vector box content arrays lists
+            if (step.final) {
+                finalVector.innerHTML = step.final.map(val => `<div class="array-el">${val}</div>`).join('');
+            }
+
+            // Update optional tracking elements for the reversal logic flow block
+            if (algoSelect.value === 'reverse' && step.showRev && step.revVal) {
+                reversedVector.innerHTML = step.revVal.map(val => `<div class="array-el reversed">${val}</div>`).join('');
+            } else {
+                reversedVector.innerHTML = '';
+            }
+
+            // Highlighting nodes graphical styles based on state metadata settings properties definitions
+            document.querySelectorAll('.node-circle').forEach(circle => {
+                const cid = parseInt(circle.id.split('-')[1]);
+                
+                // Determine processed status across indices tracking checks
+                let looksProcessed = false;
+                if (algoSelect.value === 'reverse') {
+                    if (step.showRev) looksProcessed = true;
+                } else if (algoSelect.value === 'twostack') {
+                    // Check if node values logged into result buffer
+                    if (step.final && step.final.includes(parseInt(document.getElementById(`text-${cid}`).innerText))) {
+                        looksProcessed = true;
+                    }
+                } else if (algoSelect.value === 'onestack') {
+                    if (step.final && step.final.includes(parseInt(document.getElementById(`text-${cid}`).innerText))) {
+                        looksProcessed = true;
+                    }
+                }
+
+                if (looksProcessed) {
+                    circle.className.baseVal = "node-circle processed";
+                } else if (step.activeNode && step.activeNode === cid) {
+                    circle.className.baseVal = "node-circle active";
+                } else if (step.peekNode && step.peekNode === cid) {
+                    circle.className.baseVal = "node-circle peeked";
+                } else {
+                    circle.className.baseVal = "node-circle";
+                }
+            });
+        }
+
+        stepBtn.addEventListener('click', () => {
+            if (currentIdx < steps.length - 1) {
+                currentIdx++;
+                updateUIState(currentIdx);
+            } else {
+                stepBtn.disabled = true;
+                statusMsg.innerText = "Execution Trace Complete! All steps processed successfully.";
+            }
+        });
+
+        resetBtn.addEventListener('click', runReset);
+        algoSelect.addEventListener('change', runReset);
+
+        // Run baseline setup routines on component activation mount
+        runReset();
+    </script>
+</body>
+</html>
+"""
+
+with open("index.html", "w", encoding="utf-8") as f:
+    f.write(html_content)
+
+print("FILE_GENERATION_SUCCESS")
