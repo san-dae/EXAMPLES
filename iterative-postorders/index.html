@@ -1,6 +1,4 @@
-import base64
-
-html_content = """<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -125,7 +123,6 @@ html_content = """<!DOCTYPE html>
             font-size: 0.95rem;
         }
 
-        /* 3-Column Layout using table-cell for reliability */
         .workspace {
             display: table;
             width: 100%;
@@ -155,7 +152,6 @@ html_content = """<!DOCTYPE html>
             font-weight: 600;
         }
 
-        /* Visualizing the Tree */
         .tree-container {
             height: 440px;
             display: block;
@@ -209,7 +205,6 @@ html_content = """<!DOCTYPE html>
             transition: stroke 0.25s;
         }
 
-        /* Code Blocks */
         pre {
             background: #070a12;
             padding: 15px;
@@ -236,7 +231,6 @@ html_content = """<!DOCTYPE html>
             font-weight: 500;
         }
 
-        /* Stack Visualizer */
         .stacks-container {
             height: 440px;
             display: block;
@@ -280,7 +274,6 @@ html_content = """<!DOCTYPE html>
             color: var(--accent-purple);
         }
 
-        /* Results Footer */
         .results-panel {
             margin-top: 25px;
             background: var(--panel-bg);
@@ -408,7 +401,6 @@ html_content = """<!DOCTYPE html>
     </div>
 
     <script>
-        // Standard structural demonstration tree layout matrix
         const treeData = {
             id: 1, val: 1, x: 200, y: 50,
             left: {
@@ -485,14 +477,13 @@ html_content = """<!DOCTYPE html>
         let steps = [];
         let currentIdx = -1;
 
-        // --- Step State Generator Functions ---
         function buildReverseSteps(root) {
             let trace = [];
             trace.push({ line: 0, msg: "Initialize results array.", st1: [], final: [], activeNode: null });
             trace.push({ line: 1, msg: "Declare final return container vector.", st1: [], final: [] });
             trace.push({ line: 2, msg: "Check if tree is null.", st1: [], final: [] });
             trace.push({ line: 3, msg: "Instantiate traversal execution stack.", st1: [], final: [] });
-            trace.push({ line: 4, msg: "Push root node into stack.", st1: [1], final: [] });
+            trace.push({ line: 4, msg: "Push root node into stack.", st1: [root], final: [] });
 
             let st = [root];
             let fin = [];
@@ -535,7 +526,7 @@ html_content = """<!DOCTYPE html>
             trace.push({ line: 1, msg: "Create final tracking storage vector array.", st1: [], st2: [], final: [] });
             trace.push({ line: 2, msg: "Verify base structural constraints.", st1: [], st2: [], final: [] });
             trace.push({ line: 3, msg: "Instantiate Stack 1 and Stack 2 structures.", st1: [], st2: [], final: [] });
-            trace.push({ line: 4, msg: "Push root node into structural Stack 1.", st1: [1], st2: [], final: [] });
+            trace.push({ line: 4, msg: "Push root node into structural Stack 1.", st1: [root], st2: [], final: [] });
 
             let st1 = [root];
             let st2 = [];
@@ -642,7 +633,6 @@ html_content = """<!DOCTYPE html>
             return trace;
         }
 
-        // --- DOM Selectors ---
         const svg = document.getElementById('treeSvg');
         const codeBlock = document.getElementById('codeBlock');
         const stack1Box = document.getElementById('stack1Box');
@@ -715,7 +705,6 @@ html_content = """<!DOCTYPE html>
             stepBtn.disabled = false;
             statusMsg.innerText = "Simulator reset. Click Step Forward to trace execution.";
             
-            // Clear styles
             document.querySelectorAll('.node-circle').forEach(c => c.className.baseVal = "node-circle");
         }
 
@@ -727,49 +716,43 @@ html_content = """<!DOCTYPE html>
 
             const step = steps[idx];
             
-            // Highlight current execution pointer
             const currentLine = document.getElementById(`line-${step.line}`);
             if (currentLine) currentLine.classList.add('highlight');
 
-            // Set status textual details
             statusMsg.innerText = step.msg;
 
-            // Render Stack 1 visual states elements arrays mapping
+            // FIX: Dynamic structural evaluation loops checking objects vs raw numeric IDs
             if (step.st1) {
-                stack1Box.innerHTML = step.st1.map(val => `<div class="stack-frame">node: ${val}</div>`).join('');
+                stack1Box.innerHTML = step.st1.map(item => {
+                    const displayVal = (item && typeof item === 'object') ? item.val : item;
+                    return `<div class="stack-frame">node: ${displayVal}</div>`;
+                }).join('');
             }
 
-            // Render Stack 2 visual states if strategy selection dictates it
             if (algoSelect.value === 'twostack' && step.st2) {
-                stack2Box.innerHTML = step.st2.map(val => `<div class="stack-frame purple">node: ${val.val}</div>`).join('');
+                stack2Box.innerHTML = step.st2.map(item => {
+                    const displayVal = (item && typeof item === 'object') ? item.val : item;
+                    return `<div class="stack-frame purple">node: ${displayVal}</div>`;
+                }).join('');
             }
 
-            // Update main outputs vector box content arrays lists
             if (step.final) {
                 finalVector.innerHTML = step.final.map(val => `<div class="array-el">${val}</div>`).join('');
             }
 
-            // Update optional tracking elements for the reversal logic flow block
             if (algoSelect.value === 'reverse' && step.showRev && step.revVal) {
                 reversedVector.innerHTML = step.revVal.map(val => `<div class="array-el reversed">${val}</div>`).join('');
             } else {
                 reversedVector.innerHTML = '';
             }
 
-            // Highlighting nodes graphical styles based on state metadata settings properties definitions
             document.querySelectorAll('.node-circle').forEach(circle => {
                 const cid = parseInt(circle.id.split('-')[1]);
                 
-                // Determine processed status across indices tracking checks
                 let looksProcessed = false;
                 if (algoSelect.value === 'reverse') {
                     if (step.showRev) looksProcessed = true;
-                } else if (algoSelect.value === 'twostack') {
-                    // Check if node values logged into result buffer
-                    if (step.final && step.final.includes(parseInt(document.getElementById(`text-${cid}`).innerText))) {
-                        looksProcessed = true;
-                    }
-                } else if (algoSelect.value === 'onestack') {
+                } else {
                     if (step.final && step.final.includes(parseInt(document.getElementById(`text-${cid}`).innerText))) {
                         looksProcessed = true;
                     }
@@ -800,14 +783,7 @@ html_content = """<!DOCTYPE html>
         resetBtn.addEventListener('click', runReset);
         algoSelect.addEventListener('change', runReset);
 
-        // Run baseline setup routines on component activation mount
         runReset();
     </script>
 </body>
 </html>
-"""
-
-with open("index.html", "w", encoding="utf-8") as f:
-    f.write(html_content)
-
-print("FILE_GENERATION_SUCCESS")
