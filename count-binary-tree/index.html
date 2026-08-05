@@ -173,7 +173,7 @@
             border: 1px solid var(--border-color);
             border-radius: 8px;
             padding: 12px;
-            height: 120px;
+            height: 140px;
             overflow-y: auto;
             font-family: monospace;
             font-size: 0.85rem;
@@ -204,11 +204,6 @@
             stroke-width: 3;
         }
 
-        .edge.active {
-            stroke: var(--accent-yellow);
-            stroke-width: 4;
-        }
-
         .node-circle {
             fill: var(--panel-bg);
             stroke: var(--text-muted);
@@ -237,11 +232,6 @@
         .node.checking .node-circle {
             stroke: var(--accent-blue);
             stroke-width: 3;
-        }
-
-        .node.shortcut .node-circle {
-            fill: var(--accent-purple);
-            stroke: #fff;
         }
 
         .node.counted .node-circle {
@@ -312,7 +302,6 @@
     </div>
 
     <script>
-        // Tree Node Structure
         class TreeNode {
             constructor(val, x = 0, y = 0) {
                 this.val = val;
@@ -323,7 +312,6 @@
             }
         }
 
-        // Global State
         let totalNodes = 6;
         let currentApproach = 2;
         let animationSteps = [];
@@ -333,7 +321,6 @@
         let treeRoot = null;
         let nodeMap = {};
 
-        // DOM Elements
         const svg = document.getElementById('tree-svg');
         const nodeCountInput = document.getElementById('node-count');
         const nodeCountVal = document.getElementById('node-count-val');
@@ -347,7 +334,6 @@
         const statStatus = document.getElementById('stat-status');
         const logPanel = document.getElementById('log-panel');
 
-        // Build Complete Binary Tree array-style
         function buildTree(n) {
             if (n <= 0) return null;
             const nodes = [];
@@ -363,7 +349,6 @@
             return nodes[0];
         }
 
-        // Layout tree nodes for SVG rendering
         function layoutTree(root) {
             nodeMap = {};
             if (!root) return;
@@ -385,12 +370,10 @@
             positionNode(root, 0, svgWidth / 2, svgWidth / 4);
         }
 
-        // Render SVG elements
         function renderTree() {
             svg.innerHTML = '';
             if (!treeRoot) return;
 
-            // Draw Edges first
             function drawEdges(node) {
                 if (!node) return;
                 if (node.left) {
@@ -418,7 +401,6 @@
 
             drawEdges(treeRoot);
 
-            // Draw Nodes
             Object.values(nodeMap).forEach(node => {
                 const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
                 g.setAttribute('class', 'node');
@@ -443,14 +425,14 @@
 
         function generateStepsApproach2(root) {
             const steps = [];
-            let totalCount = 0;
+            let displayedCount = 0;
 
             function countNodes(node) {
                 if (!node) return 0;
 
                 steps.push({
                     activeNode: node.val,
-                    count: totalCount,
+                    count: displayedCount,
                     msg: `Examining Subtree Rooted at Node ${node.val}`
                 });
 
@@ -476,15 +458,14 @@
                 steps.push({
                     activeNode: node.val,
                     highlightNodes: [...leftPath, ...rightPath],
-                    count: totalCount,
+                    count: displayedCount,
                     msg: `Node ${node.val}: Left depth = ${leftDepth}, Right depth = ${rightDepth}`
                 });
 
                 if (leftDepth === rightDepth) {
                     const added = (1 << leftDepth) - 1;
-                    totalCount += added;
+                    displayedCount += added;
 
-                    // Collect all nodes in this full subtree
                     let subtreeNodes = [];
                     function collect(curr) {
                         if (!curr) return;
@@ -496,31 +477,45 @@
 
                     steps.push({
                         activeNode: node.val,
-                        countedNodes: subtreeNodes,
-                        count: totalCount,
-                        msg: `Perfect Binary Tree detected! Added 2^${leftDepth} - 1 = ${added} nodes instantly.`
+                        addCountedNodes: subtreeNodes,
+                        count: displayedCount,
+                        msg: `Perfect Binary Tree detected at Node ${node.val}! Formula (2^${leftDepth} - 1) = ${added} nodes counted.`
                     });
                     return added;
                 } else {
                     steps.push({
                         activeNode: node.val,
-                        count: totalCount,
-                        msg: `Depths differ (${leftDepth} != ${rightDepth}). Splitting: 1 + left subtree + right subtree.`
+                        count: displayedCount,
+                        msg: `Depths differ (${leftDepth} != ${rightDepth}). Splitting: 1 + count(Node ${node.left ? node.left.val : 'null'}) + count(Node ${node.right ? node.right.val : 'null'}).`
                     });
 
                     let leftVal = countNodes(node.left);
                     let rightVal = countNodes(node.right);
                     
-                    return 1 + leftVal + rightVal;
+                    let totalSubtree = 1 + leftVal + rightVal;
+                    displayedCount += 1; // Count the root node itself now as it returns
+
+                    steps.push({
+                        activeNode: node.val,
+                        addCountedNodes: [node.val],
+                        count: displayedCount,
+                        msg: `Node ${node.val} combining results: 1 (itself) + ${leftVal} (left) + ${rightVal} (right) = ${totalSubtree} nodes.`
+                    });
+
+                    return totalSubtree;
                 }
             }
 
             countNodes(root);
 
+            // Collect all nodes to ensure 100% green at end
+            let allNodeIds = Object.keys(nodeMap).map(Number);
+
             steps.push({
                 activeNode: null,
-                count: totalCount,
-                msg: `Completed! Total Complete Tree Node Count = ${totalCount}`
+                addCountedNodes: allNodeIds,
+                count: totalNodes,
+                msg: `Completed! Total Complete Tree Node Count = ${totalNodes}. All nodes accounted for.`
             });
 
             return steps;
@@ -532,7 +527,6 @@
 
             let totalCount = 0;
 
-            // Measure initial height
             let height = 0;
             let curr = root;
             let leftPath = [];
@@ -560,7 +554,7 @@
                 });
 
                 if (!curr.right) {
-                    totalCount += 1; // Node itself
+                    totalCount += 1;
                     let leftChildNodes = [];
                     if (curr.left) {
                         totalCount += 1;
@@ -568,14 +562,13 @@
                     }
                     steps.push({
                         activeNode: curr.val,
-                        countedNodes: [curr.val, ...leftChildNodes],
+                        addCountedNodes: [curr.val, ...leftChildNodes],
                         count: totalCount,
                         msg: `Leaf/Base level reached. Added remaining nodes directly.`
                     });
                     break;
                 }
 
-                // Check left depth of right child
                 let rightLeftDepth = 0;
                 let p = curr.right;
                 let rPath = [curr.right.val];
@@ -593,7 +586,6 @@
                 });
 
                 if (rightLeftDepth === currHeight - 1) {
-                    // Case A: Left Subtree is Full
                     const added = (1 << (currHeight - 1));
                     totalCount += added;
 
@@ -608,14 +600,13 @@
 
                     steps.push({
                         activeNode: curr.val,
-                        countedNodes: leftSubtreeNodes,
+                        addCountedNodes: leftSubtreeNodes,
                         count: totalCount,
                         msg: `Right branch hits bottom! Entire Left Subtree + Node ${curr.val} is FULL (${added} nodes). Moving RIGHT.`
                     });
 
                     curr = curr.right;
                 } else {
-                    // Case B: Right Subtree is Full (at height - 2)
                     const added = (1 << (currHeight - 2));
                     totalCount += added;
 
@@ -630,7 +621,7 @@
 
                     steps.push({
                         activeNode: curr.val,
-                        countedNodes: rightSubtreeNodes,
+                        addCountedNodes: rightSubtreeNodes,
                         count: totalCount,
                         msg: `Right branch short! Entire Right Subtree + Node ${curr.val} is FULL (${added} nodes). Moving LEFT.`
                     });
@@ -641,10 +632,13 @@
                 currHeight--;
             }
 
+            let allNodeIds = Object.keys(nodeMap).map(Number);
+
             steps.push({
                 activeNode: null,
-                count: totalCount,
-                msg: `Completed! Total Complete Tree Node Count = ${totalCount}`
+                addCountedNodes: allNodeIds,
+                count: totalNodes,
+                msg: `Completed! Total Complete Tree Node Count = ${totalNodes}. All nodes accounted for.`
             });
 
             return steps;
@@ -656,19 +650,14 @@
 
             const step = animationSteps[stepIndex];
 
-            // Reset visual states
             document.querySelectorAll('.node').forEach(n => {
-                n.classList.remove('active', 'checking', 'shortcut', 'counted');
-            });
-            document.querySelectorAll('.edge').forEach(e => {
-                e.classList.remove('visited', 'active');
+                n.classList.remove('active', 'checking', 'counted');
             });
 
-            // Mark accumulated counted nodes up to this point
             let accumulatedCounted = new Set();
             for (let i = 0; i <= stepIndex; i++) {
-                if (animationSteps[i].countedNodes) {
-                    animationSteps[i].countedNodes.forEach(id => accumulatedCounted.add(id));
+                if (animationSteps[i].addCountedNodes) {
+                    animationSteps[i].addCountedNodes.forEach(id => accumulatedCounted.add(id));
                 }
             }
 
@@ -677,7 +666,6 @@
                 if (el) el.classList.add('counted');
             });
 
-            // Highlight temporarily checked nodes
             if (step.highlightNodes) {
                 step.highlightNodes.forEach(id => {
                     const el = document.getElementById(`node-${id}`);
@@ -685,7 +673,6 @@
                 });
             }
 
-            // Highlight Active Node
             if (step.activeNode) {
                 const activeEl = document.getElementById(`node-${step.activeNode}`);
                 if (activeEl) {
@@ -694,18 +681,14 @@
                 }
             }
 
-            // UI updates
             statCount.textContent = step.count;
             statSteps.textContent = `${stepIndex + 1} / ${animationSteps.length}`;
             
-            // Add Log Entry
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry highlight';
             logEntry.textContent = `[Step ${stepIndex + 1}] ${step.msg}`;
             logPanel.prepend(logEntry);
         }
-
-        // --- Controls ---
 
         function initSimulation() {
             stopAutoPlay();
@@ -778,7 +761,6 @@
             if (playInterval) clearInterval(playInterval);
         }
 
-        // Event Listeners
         nodeCountInput.addEventListener('input', (e) => {
             nodeCountVal.textContent = e.target.value;
             initSimulation();
@@ -796,7 +778,6 @@
             applyStep(currentStepIdx);
         });
 
-        // Initialize on load
         initSimulation();
     </script>
 </body>
