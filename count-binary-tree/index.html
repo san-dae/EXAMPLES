@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Count Complete Tree Nodes Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --panel-bg: #1e293b;
+            --accent-blue: #38bdf8;
+            --accent-green: #4ade80;
+            --accent-yellow: #facc15;
+            --accent-purple: #c084fc;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-color: #334155;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+            color: var(--accent-blue);
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        select, input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 4px;
+            outline: none;
+        }
+
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #2563eb;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #1d4ed8;
+        }
+
+        button:disabled {
+            background-color: var(--border-color);
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        .stats-card {
+            background-color: var(--bg-color);
+            border-radius: 6px;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 0.9rem;
+        }
+
+        .stat-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .stat-val {
+            font-weight: bold;
+            color: var(--accent-green);
+        }
+
+        .visualizer-area {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .svg-container {
+            flex-grow: 1;
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            min-height: 400px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        .log-panel {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            height: 120px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 0.85rem;
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column-reverse;
+        }
+
+        .log-entry {
+            margin-bottom: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .log-entry.highlight {
+            color: var(--accent-yellow);
+        }
+
+        /* SVG Styles */
+        .edge {
+            stroke: var(--border-color);
+            stroke-width: 2;
+            transition: stroke 0.3s, stroke-width 0.3s;
+        }
+
+        .edge.visited {
+            stroke: var(--accent-blue);
+            stroke-width: 3;
+        }
+
+        .edge.active {
+            stroke: var(--accent-yellow);
+            stroke-width: 4;
+        }
+
+        .node-circle {
+            fill: var(--panel-bg);
+            stroke: var(--text-muted);
+            stroke-width: 2;
+            transition: fill 0.3s, stroke 0.3s, transform 0.3s;
+        }
+
+        .node-text {
+            fill: var(--text-main);
+            font-size: 12px;
+            font-weight: bold;
+            text-anchor: middle;
+            dominant-baseline: central;
+            pointer-events: none;
+        }
+
+        .node.active .node-circle {
+            fill: var(--accent-yellow);
+            stroke: #fff;
+        }
+        
+        .node.active .node-text {
+            fill: #000;
+        }
+
+        .node.checking .node-circle {
+            stroke: var(--accent-blue);
+            stroke-width: 3;
+        }
+
+        .node.shortcut .node-circle {
+            fill: var(--accent-purple);
+            stroke: #fff;
+        }
+
+        .node.counted .node-circle {
+            fill: var(--accent-green);
+            stroke: #fff;
+        }
+
+        .node.counted .node-text {
+            fill: #000;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Count Complete Tree Nodes Visualizer</h1>
+    </header>
+
+    <div class="container">
+        <!-- Controls Panel -->
+        <div class="panel">
+            <div class="control-group">
+                <label for="approach-select">Algorithm Approach</label>
+                <select id="approach-select">
+                    <option value="2">Approach 2: Full Subtree Shortcut O(log² n)</option>
+                    <option value="3">Approach 3: Binary Search Decision O(log n)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="node-count">Number of Nodes (<span id="node-count-val">6</span>)</label>
+                <input type="range" id="node-count" min="1" max="15" value="6">
+            </div>
+
+            <div class="btn-group">
+                <button id="btn-prev">Step Back</button>
+                <button id="btn-play">Play</button>
+                <button id="btn-next">Step Next</button>
+            </div>
+
+            <button id="btn-reset" style="background-color: var(--border-color);">Reset</button>
+
+            <div class="stats-card">
+                <div class="stat-row">
+                    <span>Current Count Tally:</span>
+                    <span id="stat-count" class="stat-val">0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Algorithm Steps:</span>
+                    <span id="stat-steps" class="stat-val">0 / 0</span>
+                </div>
+                <div class="stat-row">
+                    <span>Status:</span>
+                    <span id="stat-status" style="color: var(--accent-blue);">Ready</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Visualization Area -->
+        <div class="visualizer-area">
+            <div class="svg-container">
+                <svg id="tree-svg"></svg>
+            </div>
+            <div class="log-panel" id="log-panel">
+                <div class="log-entry">System ready. Choose configuration and click Play/Step.</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Tree Node Structure
+        class TreeNode {
+            constructor(val, x = 0, y = 0) {
+                this.val = val;
+                this.left = null;
+                this.right = null;
+                this.x = x;
+                this.y = y;
+            }
+        }
+
+        // Global State
+        let totalNodes = 6;
+        let currentApproach = 2;
+        let animationSteps = [];
+        let currentStepIdx = 0;
+        let isPlaying = false;
+        let playInterval = null;
+        let treeRoot = null;
+        let nodeMap = {};
+
+        // DOM Elements
+        const svg = document.getElementById('tree-svg');
+        const nodeCountInput = document.getElementById('node-count');
+        const nodeCountVal = document.getElementById('node-count-val');
+        const approachSelect = document.getElementById('approach-select');
+        const btnPrev = document.getElementById('btn-prev');
+        const btnNext = document.getElementById('btn-next');
+        const btnPlay = document.getElementById('btn-play');
+        const btnReset = document.getElementById('btn-reset');
+        const statCount = document.getElementById('stat-count');
+        const statSteps = document.getElementById('stat-steps');
+        const statStatus = document.getElementById('stat-status');
+        const logPanel = document.getElementById('log-panel');
+
+        // Build Complete Binary Tree array-style
+        function buildTree(n) {
+            if (n <= 0) return null;
+            const nodes = [];
+            for (let i = 1; i <= n; i++) {
+                nodes.push(new TreeNode(i));
+            }
+            for (let i = 0; i < n; i++) {
+                let leftIdx = 2 * i + 1;
+                let rightIdx = 2 * i + 2;
+                if (leftIdx < n) nodes[i].left = nodes[leftIdx];
+                if (rightIdx < n) nodes[i].right = nodes[rightIdx];
+            }
+            return nodes[0];
+        }
+
+        // Layout tree nodes for SVG rendering
+        function layoutTree(root) {
+            nodeMap = {};
+            if (!root) return;
+
+            const svgWidth = svg.clientWidth || 600;
+            const depthGap = 60;
+
+            function positionNode(node, depth, x, width) {
+                if (!node) return;
+                node.x = x;
+                node.y = 50 + depth * depthGap;
+                nodeMap[node.val] = node;
+
+                const nextWidth = width / 2;
+                if (node.left) positionNode(node.left, depth + 1, x - nextWidth, nextWidth);
+                if (node.right) positionNode(node.right, depth + 1, x + nextWidth, nextWidth);
+            }
+
+            positionNode(root, 0, svgWidth / 2, svgWidth / 4);
+        }
+
+        // Render SVG elements
+        function renderTree() {
+            svg.innerHTML = '';
+            if (!treeRoot) return;
+
+            // Draw Edges first
+            function drawEdges(node) {
+                if (!node) return;
+                if (node.left) {
+                    drawEdge(node.val, node.left.val);
+                    drawEdges(node.left);
+                }
+                if (node.right) {
+                    drawEdge(node.val, node.right.val);
+                    drawEdges(node.right);
+                }
+            }
+
+            function drawEdge(parentVal, childVal) {
+                const p = nodeMap[parentVal];
+                const c = nodeMap[childVal];
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', p.x);
+                line.setAttribute('y1', p.y);
+                line.setAttribute('x2', c.x);
+                line.setAttribute('y2', c.y);
+                line.setAttribute('class', 'edge');
+                line.setAttribute('id', `edge-${parentVal}-${childVal}`);
+                svg.appendChild(line);
+            }
+
+            drawEdges(treeRoot);
+
+            // Draw Nodes
+            Object.values(nodeMap).forEach(node => {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                g.setAttribute('class', 'node');
+                g.setAttribute('id', `node-${node.val}`);
+                g.setAttribute('transform', `translate(${node.x},${node.y})`);
+
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('r', '18');
+                circle.setAttribute('class', 'node-circle');
+
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('class', 'node-text');
+                text.textContent = node.val;
+
+                g.appendChild(circle);
+                g.appendChild(text);
+                svg.appendChild(g);
+            });
+        }
+
+        // --- Step Generation Algorithms ---
+
+        function generateStepsApproach2(root) {
+            const steps = [];
+            let totalCount = 0;
+
+            function countNodes(node) {
+                if (!node) return 0;
+
+                steps.push({
+                    activeNode: node.val,
+                    count: totalCount,
+                    msg: `Examining Subtree Rooted at Node ${node.val}`
+                });
+
+                // Measure Left Depth
+                let leftDepth = 0;
+                let l = node;
+                let leftPath = [];
+                while (l) {
+                    leftDepth++;
+                    leftPath.push(l.val);
+                    l = l.left;
+                }
+
+                // Measure Right Depth
+                let rightDepth = 0;
+                let r = node;
+                let rightPath = [];
+                while (r) {
+                    rightDepth++;
+                    r = r.right;
+                }
+
+                steps.push({
+                    activeNode: node.val,
+                    highlightNodes: [...leftPath, ...rightPath],
+                    count: totalCount,
+                    msg: `Node ${node.val}: Left depth = ${leftDepth}, Right depth = ${rightDepth}`
+                });
+
+                if (leftDepth === rightDepth) {
+                    const added = (1 << leftDepth) - 1;
+                    totalCount += added;
+
+                    // Collect all nodes in this full subtree
+                    let subtreeNodes = [];
+                    function collect(curr) {
+                        if (!curr) return;
+                        subtreeNodes.push(curr.val);
+                        collect(curr.left);
+                        collect(curr.right);
+                    }
+                    collect(node);
+
+                    steps.push({
+                        activeNode: node.val,
+                        countedNodes: subtreeNodes,
+                        count: totalCount,
+                        msg: `Perfect Binary Tree detected! Added 2^${leftDepth} - 1 = ${added} nodes instantly.`
+                    });
+                    return added;
+                } else {
+                    steps.push({
+                        activeNode: node.val,
+                        count: totalCount,
+                        msg: `Depths differ (${leftDepth} != ${rightDepth}). Splitting: 1 + left subtree + right subtree.`
+                    });
+
+                    let leftVal = countNodes(node.left);
+                    let rightVal = countNodes(node.right);
+                    
+                    return 1 + leftVal + rightVal;
+                }
+            }
+
+            countNodes(root);
+
+            steps.push({
+                activeNode: null,
+                count: totalCount,
+                msg: `Completed! Total Complete Tree Node Count = ${totalCount}`
+            });
+
+            return steps;
+        }
+
+        function generateStepsApproach3(root) {
+            const steps = [];
+            if (!root) return steps;
+
+            let totalCount = 0;
+
+            // Measure initial height
+            let height = 0;
+            let curr = root;
+            let leftPath = [];
+            while (curr) {
+                height++;
+                leftPath.push(curr.val);
+                curr = curr.left;
+            }
+
+            steps.push({
+                activeNode: root.val,
+                highlightNodes: leftPath,
+                count: totalCount,
+                msg: `Initial Tree Height measured along leftmost path = ${height}`
+            });
+
+            curr = root;
+            let currHeight = height;
+
+            while (curr) {
+                steps.push({
+                    activeNode: curr.val,
+                    count: totalCount,
+                    msg: `Standing at Node ${curr.val} with remaining depth H = ${currHeight}`
+                });
+
+                if (!curr.right) {
+                    totalCount += 1; // Node itself
+                    let leftChildNodes = [];
+                    if (curr.left) {
+                        totalCount += 1;
+                        leftChildNodes.push(curr.left.val);
+                    }
+                    steps.push({
+                        activeNode: curr.val,
+                        countedNodes: [curr.val, ...leftChildNodes],
+                        count: totalCount,
+                        msg: `Leaf/Base level reached. Added remaining nodes directly.`
+                    });
+                    break;
+                }
+
+                // Check left depth of right child
+                let rightLeftDepth = 0;
+                let p = curr.right;
+                let rPath = [curr.right.val];
+                while (p) {
+                    rightLeftDepth++;
+                    if (p.left) rPath.push(p.left.val);
+                    p = p.left;
+                }
+
+                steps.push({
+                    activeNode: curr.val,
+                    highlightNodes: rPath,
+                    count: totalCount,
+                    msg: `Right child's (Node ${curr.right.val}) left-most branch depth = ${rightLeftDepth}`
+                });
+
+                if (rightLeftDepth === currHeight - 1) {
+                    // Case A: Left Subtree is Full
+                    const added = (1 << (currHeight - 1));
+                    totalCount += added;
+
+                    let leftSubtreeNodes = [curr.val];
+                    function collect(n) {
+                        if (!n) return;
+                        leftSubtreeNodes.push(n.val);
+                        collect(n.left);
+                        collect(n.right);
+                    }
+                    collect(curr.left);
+
+                    steps.push({
+                        activeNode: curr.val,
+                        countedNodes: leftSubtreeNodes,
+                        count: totalCount,
+                        msg: `Right branch hits bottom! Entire Left Subtree + Node ${curr.val} is FULL (${added} nodes). Moving RIGHT.`
+                    });
+
+                    curr = curr.right;
+                } else {
+                    // Case B: Right Subtree is Full (at height - 2)
+                    const added = (1 << (currHeight - 2));
+                    totalCount += added;
+
+                    let rightSubtreeNodes = [curr.val];
+                    function collect(n) {
+                        if (!n) return;
+                        rightSubtreeNodes.push(n.val);
+                        collect(n.left);
+                        collect(n.right);
+                    }
+                    collect(curr.right);
+
+                    steps.push({
+                        activeNode: curr.val,
+                        countedNodes: rightSubtreeNodes,
+                        count: totalCount,
+                        msg: `Right branch short! Entire Right Subtree + Node ${curr.val} is FULL (${added} nodes). Moving LEFT.`
+                    });
+
+                    curr = curr.left;
+                }
+
+                currHeight--;
+            }
+
+            steps.push({
+                activeNode: null,
+                count: totalCount,
+                msg: `Completed! Total Complete Tree Node Count = ${totalCount}`
+            });
+
+            return steps;
+        }
+
+        // Apply Step Visuals
+        function applyStep(stepIndex) {
+            if (stepIndex < 0 || stepIndex >= animationSteps.length) return;
+
+            const step = animationSteps[stepIndex];
+
+            // Reset visual states
+            document.querySelectorAll('.node').forEach(n => {
+                n.classList.remove('active', 'checking', 'shortcut', 'counted');
+            });
+            document.querySelectorAll('.edge').forEach(e => {
+                e.classList.remove('visited', 'active');
+            });
+
+            // Mark accumulated counted nodes up to this point
+            let accumulatedCounted = new Set();
+            for (let i = 0; i <= stepIndex; i++) {
+                if (animationSteps[i].countedNodes) {
+                    animationSteps[i].countedNodes.forEach(id => accumulatedCounted.add(id));
+                }
+            }
+
+            accumulatedCounted.forEach(id => {
+                const el = document.getElementById(`node-${id}`);
+                if (el) el.classList.add('counted');
+            });
+
+            // Highlight temporarily checked nodes
+            if (step.highlightNodes) {
+                step.highlightNodes.forEach(id => {
+                    const el = document.getElementById(`node-${id}`);
+                    if (el && !el.classList.contains('counted')) el.classList.add('checking');
+                });
+            }
+
+            // Highlight Active Node
+            if (step.activeNode) {
+                const activeEl = document.getElementById(`node-${step.activeNode}`);
+                if (activeEl) {
+                    activeEl.classList.remove('checking');
+                    activeEl.classList.add('active');
+                }
+            }
+
+            // UI updates
+            statCount.textContent = step.count;
+            statSteps.textContent = `${stepIndex + 1} / ${animationSteps.length}`;
+            
+            // Add Log Entry
+            const logEntry = document.createElement('div');
+            logEntry.className = 'log-entry highlight';
+            logEntry.textContent = `[Step ${stepIndex + 1}] ${step.msg}`;
+            logPanel.prepend(logEntry);
+        }
+
+        // --- Controls ---
+
+        function initSimulation() {
+            stopAutoPlay();
+            totalNodes = parseInt(nodeCountInput.value);
+            currentApproach = parseInt(approachSelect.value);
+
+            treeRoot = buildTree(totalNodes);
+            layoutTree(treeRoot);
+            renderTree();
+
+            if (currentApproach === 2) {
+                animationSteps = generateStepsApproach2(treeRoot);
+            } else {
+                animationSteps = generateStepsApproach3(treeRoot);
+            }
+
+            currentStepIdx = 0;
+            logPanel.innerHTML = '';
+            statStatus.textContent = 'Ready';
+            statStatus.style.color = 'var(--accent-blue)';
+            applyStep(0);
+        }
+
+        function stepNext() {
+            if (currentStepIdx < animationSteps.length - 1) {
+                currentStepIdx++;
+                applyStep(currentStepIdx);
+            } else {
+                stopAutoPlay();
+                statStatus.textContent = 'Finished';
+                statStatus.style.color = 'var(--accent-green)';
+            }
+        }
+
+        function stepPrev() {
+            if (currentStepIdx > 0) {
+                currentStepIdx--;
+                applyStep(currentStepIdx);
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                stopAutoPlay();
+            } else {
+                startAutoPlay();
+            }
+        }
+
+        function startAutoPlay() {
+            if (currentStepIdx >= animationSteps.length - 1) {
+                currentStepIdx = 0;
+            }
+            isPlaying = true;
+            btnPlay.textContent = 'Pause';
+            statStatus.textContent = 'Running';
+            statStatus.style.color = 'var(--accent-yellow)';
+            playInterval = setInterval(() => {
+                if (currentStepIdx < animationSteps.length - 1) {
+                    stepNext();
+                } else {
+                    stopAutoPlay();
+                }
+            }, 1200);
+        }
+
+        function stopAutoPlay() {
+            isPlaying = false;
+            btnPlay.textContent = 'Play';
+            if (playInterval) clearInterval(playInterval);
+        }
+
+        // Event Listeners
+        nodeCountInput.addEventListener('input', (e) => {
+            nodeCountVal.textContent = e.target.value;
+            initSimulation();
+        });
+
+        approachSelect.addEventListener('change', initSimulation);
+        btnNext.addEventListener('click', () => { stopAutoPlay(); stepNext(); });
+        btnPrev.addEventListener('click', () => { stopAutoPlay(); stepPrev(); });
+        btnPlay.addEventListener('click', togglePlay);
+        btnReset.addEventListener('click', initSimulation);
+
+        window.addEventListener('resize', () => {
+            layoutTree(treeRoot);
+            renderTree();
+            applyStep(currentStepIdx);
+        });
+
+        // Initialize on load
+        initSimulation();
+    </script>
+</body>
+</html>
