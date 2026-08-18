@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Morris Flatten Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: #1e293b;
+            --accent: #38bdf8;
+            --accent-glow: rgba(56, 189, 248, 0.3);
+            --text-main: #f8fafc;
+            --text-sub: #94a3b8;
+            --highlight: #f59e0b;
+            --pred-color: #ec4899;
+            --node-bg: #334155;
+            --border: #475569;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 6px;
+        }
+
+        p.subtitle {
+            color: var(--text-sub);
+            font-size: 0.95rem;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background: var(--node-bg);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        button:hover:not(:disabled) {
+            background: var(--accent);
+            color: #000;
+            border-color: var(--accent);
+        }
+
+        button:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        #status-box {
+            font-size: 0.95rem;
+            line-height: 1.5;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            border-left: 4px solid var(--accent);
+            background: rgba(15, 23, 42, 0.6);
+            padding: 10px 16px;
+            border-radius: 0 8px 8px 0;
+        }
+
+        .tree-viewport {
+            width: 100%;
+            height: 420px;
+            position: relative;
+            overflow: hidden;
+            background: #090d16;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .node-circle {
+            fill: var(--node-bg);
+            stroke: var(--border);
+            stroke-width: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .node-text {
+            fill: var(--text-main);
+            font-weight: bold;
+            font-size: 14px;
+            text-anchor: middle;
+            dominant-baseline: central;
+            user-select: none;
+        }
+
+        .curr-node {
+            fill: rgba(245, 158, 11, 0.2);
+            stroke: var(--highlight);
+            stroke-width: 3px;
+        }
+
+        .pred-node {
+            fill: rgba(236, 72, 153, 0.2);
+            stroke: var(--pred-color);
+            stroke-width: 3px;
+        }
+
+        .tree-link {
+            stroke: var(--border);
+            stroke-width: 2px;
+            fill: none;
+            transition: all 0.3s ease;
+        }
+
+        .thread-link {
+            stroke: var(--accent);
+            stroke-width: 2px;
+            stroke-dasharray: 5, 5;
+            fill: none;
+            animation: dash 1s linear infinite;
+        }
+
+        @keyframes dash {
+            to {
+                stroke-dashoffset: -10;
+            }
+        }
+
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: var(--text-sub);
+            margin-top: 8px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-color {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Morris Flatten Visualizer</h1>
+        <p class="subtitle">Flatten Binary Tree to Linked List in O(1) Extra Space</p>
+    </header>
+
+    <div class="container">
+        <div class="panel controls">
+            <button id="btn-prev" onclick="stepPrev()" disabled>Previous</button>
+            <button id="btn-next" onclick="stepNext()">Step Forward</button>
+            <button id="btn-reset" onclick="resetVisualizer()">Reset</button>
+        </div>
+
+        <div class="panel" id="status-box">
+            Click "Step Forward" to watch Morris Traversal rewire pointers in-place.
+        </div>
+
+        <div class="panel tree-viewport">
+            <svg id="svg-canvas">
+                <defs>
+                    <marker id="arrow" viewBox="0 0 10 10" refX="22" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                        <path d="M 0 0 L 10 5 L 0 10 z" fill="#38bdf8" />
+                    </marker>
+                </defs>
+                <g id="links-group"></g>
+                <g id="nodes-group"></g>
+            </svg>
+        </div>
+
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--highlight);"></div>
+                <span>Current (`curr`)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: var(--pred-color);"></div>
+                <span>Predecessor (`pred`)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="border: 2px dashed var(--accent);"></div>
+                <span>Re-wired Thread Link</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initial Tree Definition
+        function createInitialTree() {
+            return {
+                id: 1, val: 1,
+                left: {
+                    id: 2, val: 2,
+                    left: { id: 3, val: 3, left: null, right: null },
+                    right: { id: 4, val: 4, left: null, right: null }
+                },
+                right: {
+                    id: 5, val: 5,
+                    left: null,
+                    right: { id: 6, val: 6, left: null, right: null }
+                }
+            };
+        }
+
+        let treeRoot = createInitialTree();
+        let historyStack = [];
+        let currentStepIndex = 0;
+        let steps = [];
+
+        // Generate Execution Steps for Morris Flattening
+        function generateSteps(root) {
+            let stepsArr = [];
+            let curr = root;
+
+            stepsArr.push({
+                currId: curr ? curr.id : null,
+                predId: null,
+                msg: "Start at the root node.",
+                treeState: cloneTree(root)
+            });
+
+            while (curr !== null) {
+                if (curr.left !== null) {
+                    let pred = curr.left;
+                    
+                    stepsArr.push({
+                        currId: curr.id,
+                        predId: pred.id,
+                        msg: `Node ${curr.val} has a left child. Find predecessor: start at left child (${pred.val}).`,
+                        treeState: cloneTree(root)
+                    });
+
+                    while (pred.right !== null) {
+                        pred = pred.right;
+                        stepsArr.push({
+                            currId: curr.id,
+                            predId: pred.id,
+                            msg: `Move right to find the rightmost node of the left subtree: Node ${pred.val}.`,
+                            treeState: cloneTree(root)
+                        });
+                    }
+
+                    // Attach right child of curr to pred's right
+                    pred.right = curr.right;
+                    stepsArr.push({
+                        currId: curr.id,
+                        predId: pred.id,
+                        msg: `Attach curr's right subtree (${curr.right ? curr.right.val : 'null'}) to pred (${pred.val})->right.`,
+                        treeState: cloneTree(root)
+                    });
+
+                    // Move left subtree to right
+                    curr.right = curr.left;
+                    curr.left = null;
+                    stepsArr.push({
+                        currId: curr.id,
+                        predId: null,
+                        msg: `Move curr's left child to right, and set left to null. Subtree re-wired!`,
+                        treeState: cloneTree(root)
+                    });
+                } else {
+                    stepsArr.push({
+                        currId: curr.id,
+                        predId: null,
+                        msg: `Node ${curr.val} has no left child. Move straight to curr->right.`,
+                        treeState: cloneTree(root)
+                    });
+                }
+
+                curr = curr.right;
+                if (curr) {
+                    stepsArr.push({
+                        currId: curr.id,
+                        predId: null,
+                        msg: `Advance curr to Node ${curr.val}.`,
+                        treeState: cloneTree(root)
+                    });
+                }
+            }
+
+            stepsArr.push({
+                currId: null,
+                predId: null,
+                msg: "Tree successfully flattened into a linked list in-place!",
+                treeState: cloneTree(root)
+            });
+
+            return stepsArr;
+        }
+
+        function cloneTree(node) {
+            if (!node) return null;
+            return {
+                id: node.id,
+                val: node.val,
+                left: cloneTree(node.left),
+                right: cloneTree(node.right)
+            };
+        }
+
+        // Layout Calculator for Rendering
+        function calculatePositions(root) {
+            let positions = {};
+            
+            // Assign X, Y coordinates dynamically based on tree structure
+            function assignCoordinates(node, depth = 0, leftBound = 0, rightBound = 800) {
+                if (!node) return;
+                let x = (leftBound + rightBound) / 2;
+                let y = 50 + depth * 65;
+                positions[node.id] = { x, y, val: node.val, left: node.left, right: node.right };
+
+                if (node.left && node.right) {
+                    assignCoordinates(node.left, depth + 1, leftBound, x);
+                    assignCoordinates(node.right, depth + 1, x, rightBound);
+                } else if (node.left) {
+                    assignCoordinates(node.left, depth + 1, leftBound, x);
+                } else if (node.right) {
+                    assignCoordinates(node.right, depth + 1, x, rightBound);
+                }
+            }
+
+            assignCoordinates(root, 0, 50, 750);
+            return positions;
+        }
+
+        function renderStep(step) {
+            const svgCanvas = document.getElementById('svg-canvas');
+            const nodesGroup = document.getElementById('nodes-group');
+            const linksGroup = document.getElementById('links-group');
+            const statusBox = document.getElementById('status-box');
+
+            nodesGroup.innerHTML = '';
+            linksGroup.innerHTML = '';
+            statusBox.innerHTML = step.msg;
+
+            if (!step.treeState) return;
+
+            let positions = calculatePositions(step.treeState);
+
+            // Collect Links
+            let links = [];
+            function traverseLinks(node) {
+                if (!node) return;
+                if (node.left) {
+                    links.push({ from: node.id, to: node.left.id, type: 'left' });
+                    traverseLinks(node.left);
+                }
+                if (node.right) {
+                    links.push({ from: node.id, to: node.right.id, type: 'right' });
+                    traverseLinks(node.right);
+                }
+            }
+            traverseLinks(step.treeState);
+
+            // Draw Links
+            links.forEach(link => {
+                let start = positions[link.from];
+                let end = positions[link.to];
+                if (start && end) {
+                    let path = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    path.setAttribute('x1', start.x);
+                    path.setAttribute('y1', start.y);
+                    path.setAttribute('x2', end.x);
+                    path.setAttribute('y2', end.y);
+                    path.setAttribute('class', link.type === 'left' ? 'tree-link' : 'tree-link');
+                    
+                    // Highlight thread-like links pointing backwards/downwards right
+                    if (start.y >= end.y || Math.abs(start.x - end.x) > 200) {
+                        path.setAttribute('class', 'thread-link');
+                        path.setAttribute('marker-end', 'url(#arrow)');
+                    }
+
+                    linksGroup.appendChild(path);
+                }
+            });
+
+            // Draw Nodes
+            Object.keys(positions).forEach(id => {
+                let pos = positions[id];
+                let g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+
+                let circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                circle.setAttribute('cx', pos.x);
+                circle.setAttribute('cy', pos.y);
+                circle.setAttribute('r', 18);
+                
+                let classes = ['node-circle'];
+                if (parseInt(id) === step.currId) classes.push('curr-node');
+                if (parseInt(id) === step.predId) classes.push('pred-node');
+                circle.setAttribute('class', classes.join(' '));
+
+                let text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', pos.x);
+                text.setAttribute('y', pos.y);
+                text.setAttribute('class', 'node-text');
+                text.textContent = pos.val;
+
+                g.appendChild(circle);
+                g.appendChild(text);
+                nodesGroup.appendChild(g);
+            });
+        }
+
+        function updateButtons() {
+            document.getElementById('btn-prev').disabled = currentStepIndex === 0;
+            document.getElementById('btn-next').disabled = currentStepIndex === steps.length - 1;
+        }
+
+        function stepNext() {
+            if (currentStepIndex < steps.length - 1) {
+                currentStepIndex++;
+                renderStep(steps[currentStepIndex]);
+                updateButtons();
+            }
+        }
+
+        function stepPrev() {
+            if (currentStepIndex > 0) {
+                currentStepIndex--;
+                renderStep(steps[currentStepIndex]);
+                updateButtons();
+            }
+        }
+
+        function resetVisualizer() {
+            treeRoot = createInitialTree();
+            steps = generateSteps(treeRoot);
+            currentStepIndex = 0;
+            renderStep(steps[0]);
+            updateButtons();
+        }
+
+        // Initialize on Load
+        resetVisualizer();
+    </script>
+</body>
+</html>
