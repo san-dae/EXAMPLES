@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Morris Traversal Visualizer</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-hover: #0284c7;
+      --curr-node: #f59e0b;
+      --pred-node: #ec4899;
+      --thread-color: #ec4899;
+      --visited: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 15px;
+      background: var(--card-bg);
+      padding: 15px 20px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    h1 {
+      font-size: 1.2rem;
+      color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    select, button {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      transition: all 0.2s;
+    }
+
+    button:hover {
+      border-color: var(--accent);
+      background: #1e293b;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #000;
+      font-weight: 600;
+      border: none;
+    }
+
+    button.primary:hover {
+      background: var(--accent-hover);
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .main-layout {
+      display: grid;
+      grid-template-columns: 1fr 340px;
+      gap: 20px;
+      flex: 1;
+    }
+
+    @media (max-width: 900px) {
+      .main-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .visualizer-container {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #canvas-container {
+      flex: 1;
+      position: relative;
+      min-height: 400px;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+
+    .output-panel {
+      background: rgba(15, 23, 42, 0.6);
+      border-top: 1px solid var(--border);
+      padding: 15px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .output-box {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      min-height: 36px;
+    }
+
+    .output-item {
+      background: var(--accent);
+      color: #000;
+      font-weight: bold;
+      padding: 4px 10px;
+      border-radius: 4px;
+      animation: pop 0.2s ease-out;
+    }
+
+    @keyframes pop {
+      0% { transform: scale(0.5); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .code-panel, .info-panel {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 15px;
+    }
+
+    .code-line {
+      font-family: monospace;
+      font-size: 0.82rem;
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--muted);
+      white-space: pre;
+    }
+
+    .code-line.active {
+      background: rgba(56, 189, 248, 0.2);
+      color: var(--accent);
+      font-weight: bold;
+      border-left: 3px solid var(--accent);
+    }
+
+    .status-text {
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: var(--text);
+      min-height: 48px;
+    }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      font-size: 0.8rem;
+      color: var(--muted);
+      padding: 10px 15px;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    /* Node & Edge Styles */
+    .tree-node {
+      transition: all 0.3s ease;
+    }
+
+    .node-circle {
+      fill: var(--card-bg);
+      stroke: var(--border);
+      stroke-width: 2px;
+      transition: all 0.3s ease;
+    }
+
+    .tree-node.curr .node-circle {
+      fill: var(--curr-node);
+      stroke: #fff;
+      stroke-width: 3px;
+    }
+
+    .tree-node.pred .node-circle {
+      fill: var(--pred-node);
+      stroke: #fff;
+      stroke-width: 3px;
+    }
+
+    .tree-node.visited .node-circle {
+      stroke: var(--visited);
+      stroke-width: 2.5px;
+    }
+
+    .node-text {
+      fill: var(--text);
+      font-size: 14px;
+      font-weight: bold;
+      text-anchor: middle;
+      dominant-baseline: central;
+    }
+
+    .tree-edge {
+      stroke: var(--border);
+      stroke-width: 2px;
+    }
+
+    .thread-edge {
+      stroke: var(--thread-color);
+      stroke-width: 2px;
+      stroke-dasharray: 4,4;
+      animation: dash 1s linear infinite;
+    }
+
+    @keyframes dash {
+      to { stroke-dashoffset: -8; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>Morris Traversal Interactive Studio</h1>
+    <div class="controls">
+      <label for="algo-type" style="font-size:0.85rem; color: var(--muted);">Type:</label>
+      <select id="algo-type">
+        <option value="inorder">Inorder (Left -> Root -> Right)</option>
+        <option value="preorder">Preorder (Root -> Left -> Right)</option>
+      </select>
+      <button id="btn-step" class="primary">Step Forward</button>
+      <button id="btn-reset">Reset</button>
+    </div>
+  </header>
+
+  <div class="legend">
+    <div class="legend-item"><div class="dot" style="background: var(--curr-node);"></div> curr</div>
+    <div class="legend-item"><div class="dot" style="background: var(--pred-node);"></div> pred (inorder predecessor)</div>
+    <div class="legend-item"><div class="dot" style="background: var(--visited); border: 1px solid #fff;"></div> Outputted</div>
+    <div class="legend-item"><div class="dot" style="background: var(--thread-color);"></div> Thread Pointer</div>
+  </div>
+
+  <div class="main-layout">
+    <div class="visualizer-container">
+      <div id="canvas-container">
+        <svg id="svg-canvas"></svg>
+      </div>
+      <div class="output-panel">
+        <span style="font-size: 0.8rem; color: var(--muted);">Output Array (std::vector&lt;int&gt;):</span>
+        <div class="output-box" id="output-box"></div>
+      </div>
+    </div>
+
+    <div class="side-panel">
+      <div class="info-panel">
+        <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 5px;">Execution State:</span>
+        <div class="status-text" id="status-text">Click "Step Forward" to start traversal.</div>
+      </div>
+
+      <div class="code-panel">
+        <span style="font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 10px;">C++ Trace Window:</span>
+        <div id="code-display"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- Code Snippets ---
+    const codeSnippets = {
+      inorder: [
+        /* 0 */ "while (curr != nullptr) {",
+        /* 1 */ "  if (curr->left == nullptr) {",
+        /* 2 */ "    result.push_back(curr->val);",
+        /* 3 */ "    curr = curr->right;",
+        /* 4 */ "  } else {",
+        /* 5 */ "    pred = curr->left;",
+        /* 6 */ "    while (pred->right && pred->right != curr)",
+        /* 7 */ "      pred = pred->right;",
+        /* 8 */ "    if (pred->right == nullptr) {",
+        /* 9 */ "      pred->right = curr; // Make Thread",
+        /* 10*/ "      curr = curr->left;",
+        /* 11*/ "    } else {",
+        /* 12*/ "      pred->right = nullptr; // Cut Thread",
+        /* 13*/ "      result.push_back(curr->val);",
+        /* 14*/ "      curr = curr->right;",
+        /* 15*/ "    }",
+        /* 16*/ "  }",
+        /* 17*/ "}"
+      ],
+      preorder: [
+        /* 0 */ "while (curr != nullptr) {",
+        /* 1 */ "  if (curr->left == nullptr) {",
+        /* 2 */ "    result.push_back(curr->val);",
+        /* 3 */ "    curr = curr->right;",
+        /* 4 */ "  } else {",
+        /* 5 */ "    pred = curr->left;",
+        /* 6 */ "    while (pred->right && pred->right != curr)",
+        /* 7 */ "      pred = pred->right;",
+        /* 8 */ "    if (pred->right == nullptr) {",
+        /* 9 */ "      result.push_back(curr->val);",
+        /* 10*/ "      pred->right = curr; // Make Thread",
+        /* 11*/ "      curr = curr->left;",
+        /* 12*/ "    } else {",
+        /* 13*/ "      pred->right = nullptr; // Cut Thread",
+        /* 14*/ "      curr = curr->right;",
+        /* 15*/ "    }",
+        /* 16*/ "  }",
+        /* 17*/ "}"
+      ]
+    };
+
+    // --- Tree Data Structure ---
+    // Represents a fixed binary tree for visual demonstration
+    const treeData = {
+      id: 1, val: 1, x: 200, y: 50,
+      left: {
+        id: 2, val: 2, x: 100, y: 130,
+        left: { id: 4, val: 4, x: 50, y: 210, left: null, right: null },
+        right: { id: 5, val: 5, x: 150, y: 210, left: null, right: null }
+      },
+      right: {
+        id: 3, val: 3, x: 300, y: 130,
+        left: null,
+        right: null
+      }
+    };
+
+    // Global Visualizer State
+    let currAlgo = 'inorder';
+    let generator = null;
+    let currNode = null;
+    let predNode = null;
+    let outputList = [];
+    let threads = []; // Array of {fromId, toId}
+
+    // --- DOM Elements ---
+    const svg = document.getElementById('svg-canvas');
+    const codeDisplay = document.getElementById('code-display');
+    const statusText = document.getElementById('status-text');
+    const outputBox = document.getElementById('output-box');
+    const btnStep = document.getElementById('btn-step');
+    const btnReset = document.getElementById('btn-reset');
+    const algoSelect = document.getElementById('algo-type');
+
+    // --- Node Helpers ---
+    function findNodeById(root, id) {
+      if (!root) return null;
+      if (root.id === id) return root;
+      return findNodeById(root.left, id) || findNodeById(root.right, id);
+    }
+
+    function renderCode(type, activeLine = -1) {
+      codeDisplay.innerHTML = codeSnippets[type]
+        .map((line, idx) => `<div class="code-line ${idx === activeLine ? 'active' : ''}">${escapeHtml(line)}</div>`)
+        .join('');
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    }
+
+    // --- SVG Tree Drawing ---
+    function drawTree() {
+      svg.innerHTML = '';
+      
+      // Defs for Arrowhead
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.innerHTML = `
+        <marker id="arrow" viewBox="0 0 10 10" refX="20" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="var(--thread-color)" />
+        </marker>
+      `;
+      svg.appendChild(defs);
+
+      // Draw Edges First
+      drawEdges(treeData);
+
+      // Draw Threads
+      threads.forEach(t => {
+        const from = findNodeById(treeData, t.fromId);
+        const to = findNodeById(treeData, t.toId);
+        if (from && to) {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          // Quadratic curve for threads to avoid overlapping tree lines
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const cx = from.x + dx / 2 - (dy > 0 ? 40 : -40);
+          const cy = from.y + dy / 2;
+
+          path.setAttribute('d', `M ${from.x} ${from.y} Q ${cx} ${cy} ${to.x} ${to.y}`);
+          path.setAttribute('class', 'thread-edge');
+          path.setAttribute('marker-end', 'url(#arrow)');
+          svg.appendChild(path);
+        }
+      });
+
+      // Draw Nodes
+      drawNodes(treeData);
+    }
+
+    function drawEdges(node) {
+      if (!node) return;
+      if (node.left) {
+        drawLine(node.x, node.y, node.left.x, node.left.y);
+        drawEdges(node.left);
+      }
+      if (node.right) {
+        drawLine(node.x, node.y, node.right.x, node.right.y);
+        drawEdges(node.right);
+      }
+    }
+
+    function drawLine(x1, y1, x2, y2) {
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x1);
+      line.setAttribute('y1', y1);
+      line.setAttribute('x2', x2);
+      line.setAttribute('y2', y2);
+      line.setAttribute('class', 'tree-edge');
+      svg.appendChild(line);
+    }
+
+    function drawNodes(node) {
+      if (!node) return;
+
+      const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      let classes = ['tree-node'];
+      if (currNode && currNode.id === node.id) classes.push('curr');
+      if (predNode && predNode.id === node.id) classes.push('pred');
+      if (outputList.includes(node.val)) classes.push('visited');
+
+      g.setAttribute('class', classes.join(' '));
+
+      const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+      circle.setAttribute('cx', node.x);
+      circle.setAttribute('cy', node.y);
+      circle.setAttribute('r', 18);
+      circle.setAttribute('class', 'node-circle');
+
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', node.x);
+      text.setAttribute('y', node.y);
+      text.setAttribute('class', 'node-text');
+      text.textContent = node.val;
+
+      g.appendChild(circle);
+      g.appendChild(text);
+      svg.appendChild(g);
+
+      drawNodes(node.left);
+      drawNodes(node.right);
+    }
+
+    function updateUI() {
+      drawTree();
+      outputBox.innerHTML = outputList.map(v => `<div class="output-item">${v}</div>`).join('');
+    }
+
+    // --- Morris Traversal Generator Engine ---
+    function* morrisInorderGenerator(root) {
+      let curr = root;
+      currNode = curr;
+      predNode = null;
+
+      yield { line: 0, msg: "Initialize curr = root." };
+
+      while (curr !== null) {
+        currNode = curr;
+        predNode = null;
+        yield { line: 1, msg: `Checking if curr (Node ${curr.val}) has a left child.` };
+
+        if (curr.left === null) {
+          outputList.push(curr.val);
+          yield { line: 2, msg: `No left child. Output Node ${curr.val}.` };
+
+          curr = getEffectiveRight(curr);
+          currNode = curr;
+          yield { line: 3, msg: `Move curr to right child.` };
+        } else {
+          let pred = curr.left;
+          predNode = pred;
+          yield { line: 5, msg: `Left child exists. Finding in-order predecessor...` };
+
+          while (getEffectiveRight(pred) !== null && getEffectiveRight(pred) !== curr) {
+            pred = getEffectiveRight(pred);
+            predNode = pred;
+            yield { line: 6, msg: `Moving right to find predecessor: Node ${pred.val}.` };
+          }
+
+          if (getEffectiveRight(pred) === null) {
+            // Make thread
+            threads.push({ fromId: pred.id, toId: curr.id });
+            yield { line: 9, msg: `First time visiting. Create thread shortcut: Node ${pred.val} -> Node ${curr.val}.` };
+
+            curr = curr.left;
+            currNode = curr;
+            predNode = null;
+            yield { line: 10, msg: `Move curr to left child (Node ${curr.val}).` };
+          } else {
+            // Cut thread
+            threads = threads.filter(t => !(t.fromId === pred.id && t.toId === curr.id));
+            yield { line: 12, msg: `Second time visiting. Cut thread: Node ${pred.val} -> Node ${curr.val}.` };
+
+            outputList.push(curr.val);
+            yield { line: 13, msg: `Output Node ${curr.val}.` };
+
+            curr = getEffectiveRight(curr);
+            currNode = curr;
+            predNode = null;
+            yield { line: 14, msg: `Move curr to right child.` };
+          }
+        }
+      }
+
+      currNode = null;
+      predNode = null;
+      yield { line: 17, msg: "Traversal Complete! All nodes processed in O(1) extra space." };
+    }
+
+    function* morrisPreorderGenerator(root) {
+      let curr = root;
+      currNode = curr;
+      predNode = null;
+
+      yield { line: 0, msg: "Initialize curr = root." };
+
+      while (curr !== null) {
+        currNode = curr;
+        predNode = null;
+        yield { line: 1, msg: `Checking if curr (Node ${curr.val}) has a left child.` };
+
+        if (curr.left === null) {
+          outputList.push(curr.val);
+          yield { line: 2, msg: `No left child. Output Node ${curr.val}.` };
+
+          curr = getEffectiveRight(curr);
+          currNode = curr;
+          yield { line: 3, msg: `Move curr to right child.` };
+        } else {
+          let pred = curr.left;
+          predNode = pred;
+          yield { line: 5, msg: `Left child exists. Finding in-order predecessor...` };
+
+          while (getEffectiveRight(pred) !== null && getEffectiveRight(pred) !== curr) {
+            pred = getEffectiveRight(pred);
+            predNode = pred;
+            yield { line: 6, msg: `Moving right to find predecessor: Node ${pred.val}.` };
+          }
+
+          if (getEffectiveRight(pred) === null) {
+            outputList.push(curr.val);
+            yield { line: 9, msg: `Preorder Output: Output Node ${curr.val} BEFORE moving left.` };
+
+            threads.push({ fromId: pred.id, toId: curr.id });
+            yield { line: 10, msg: `Create thread shortcut: Node ${pred.val} -> Node ${curr.val}.` };
+
+            curr = curr.left;
+            currNode = curr;
+            predNode = null;
+            yield { line: 11, msg: `Move curr to left child (Node ${curr.val}).` };
+          } else {
+            threads = threads.filter(t => !(t.fromId === pred.id && t.toId === curr.id));
+            yield { line: 13, msg: `Second time visiting. Cut thread: Node ${pred.val} -> Node ${curr.val}.` };
+
+            curr = getEffectiveRight(curr);
+            currNode = curr;
+            predNode = null;
+            yield { line: 14, msg: `Move curr to right child.` };
+          }
+        }
+      }
+
+      currNode = null;
+      predNode = null;
+      yield { line: 17, msg: "Traversal Complete! All nodes processed in O(1) extra space." };
+    }
+
+    function getEffectiveRight(node) {
+      const thread = threads.find(t => t.fromId === node.id);
+      if (thread) {
+        return findNodeById(treeData, thread.toId);
+      }
+      return node.right;
+    }
+
+    // --- Event Handlers ---
+    function resetVisualization() {
+      currAlgo = algoSelect.value;
+      outputList = [];
+      threads = [];
+      currNode = null;
+      predNode = null;
+
+      if (currAlgo === 'inorder') {
+        generator = morrisInorderGenerator(treeData);
+      } else {
+        generator = morrisPreorderGenerator(treeData);
+      }
+
+      renderCode(currAlgo, -1);
+      statusText.textContent = 'Click "Step Forward" to execute line by line.';
+      btnStep.disabled = false;
+      updateUI();
+    }
+
+    btnStep.addEventListener('click', () => {
+      if (!generator) return;
+      const res = generator.next();
+
+      if (!res.done) {
+        renderCode(currAlgo, res.value.line);
+        statusText.textContent = res.value.msg;
+        updateUI();
+      } else {
+        btnStep.disabled = true;
+      }
+    });
+
+    btnReset.addEventListener('click', resetVisualization);
+    algoSelect.addEventListener('change', resetVisualization);
+
+    // Initial Start
+    resetVisualization();
+  </script>
+</body>
+</html>
