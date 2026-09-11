@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Regex Recursion & DP Visualizer</title>
+  <style>
+    * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    body { background: #0f172a; color: #f8fafc; margin: 0; padding: 16px; display: flex; flex-direction: column; align-items: center; }
+    
+    .tab-header { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn { background: #1e293b; border: 1px solid #334155; color: #94a3b8; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold; }
+    .tab-btn.active { background: #0284c7; color: white; border-color: #38bdf8; }
+
+    .main-layout { display: flex; gap: 16px; max-width: 1280px; width: 100%; }
+    
+    /* Left Panel: Inputs & Visuals */
+    .viz-panel { flex: 1.2; background: #1e293b; border-radius: 12px; padding: 20px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); display: flex; flex-direction: column; }
+    
+    /* Right Panel: Code Tracker */
+    .code-panel { flex: 0.8; background: #0f172a; border-radius: 12px; padding: 16px; border: 1px solid #334155; display: flex; flex-direction: column; }
+    
+    h2 { margin-top: 0; color: #38bdf8; text-align: center; font-size: 20px; }
+    
+    .input-section { display: flex; justify-content: center; gap: 12px; margin-bottom: 16px; background: #0f172a; padding: 12px; border-radius: 8px; }
+    .input-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 11px; color: #94a3b8; font-weight: bold; text-transform: uppercase; }
+    input[type="text"] { background: #334155; border: 1px solid #475569; color: white; padding: 6px 10px; border-radius: 6px; font-size: 14px; width: 140px; text-align: center; font-family: monospace; }
+
+    .string-display { display: flex; gap: 16px; justify-content: center; margin: 12px 0; }
+    .str-box { background: #0f172a; padding: 12px; border-radius: 8px; text-align: center; width: 50%; }
+    .chars { display: flex; justify-content: center; gap: 6px; font-size: 18px; font-weight: bold; margin-top: 6px; flex-wrap: wrap; }
+    .char-cell { width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: #334155; }
+    .char-cell.active { background: #0284c7; color: white; border: 2px solid #38bdf8; transform: scale(1.1); }
+    
+    .call-stack { background: #0f172a; border-radius: 8px; padding: 12px; min-height: 140px; margin-bottom: 16px; border-left: 4px solid #a855f7; max-height: 180px; overflow-y: auto; }
+    .stack-title { font-size: 12px; text-transform: uppercase; color: #a855f7; font-weight: bold; letter-spacing: 1px; margin-bottom: 6px; }
+    .stack-item { background: #334155; padding: 6px 10px; border-radius: 6px; margin-bottom: 4px; font-family: monospace; font-size: 13px; }
+    .stack-item.active { border-left: 4px solid #38bdf8; background: #1e293b; }
+    .stack-item.success { border-left: 4px solid #22c55e; color: #4ade80; }
+    .stack-item.fail { border-left: 4px solid #ef4444; color: #f87171; }
+
+    .status-card { background: #0f172a; border-radius: 8px; padding: 12px; text-align: center; border-left: 4px solid #eab308; margin-bottom: 16px; }
+    .status-text { font-size: 14px; margin-top: 4px; color: #f1f5f9; min-height: 20px; }
+
+    .controls { display: flex; justify-content: center; gap: 10px; margin-top: auto; }
+    button { background: #0284c7; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    button:hover { background: #0369a1; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    .btn-start { background: #16a34a; }
+    .btn-start:hover { background: #15803d; }
+
+    /* DP Table Styles */
+    .dp-container { display: flex; flex-direction: column; align-items: center; overflow-x: auto; margin-top: 10px; }
+    table.dp-table { border-collapse: collapse; font-family: monospace; font-size: 14px; margin-bottom: 12px; }
+    table.dp-table td, table.dp-table th { border: 1px solid #334155; width: 42px; height: 42px; text-align: center; }
+    table.dp-table th { background: #0f172a; color: #38bdf8; font-weight: bold; }
+    table.dp-table td.cell-true { background: #14532d; color: #4ade80; font-weight: bold; }
+    table.dp-table td.cell-false { background: #7f1d1d; color: #f87171; }
+    table.dp-table td.cell-active { border: 2px solid #eab308; transform: scale(1.05); }
+
+    /* Code View Styles */
+    .code-container { font-family: 'Consolas', 'Courier New', monospace; font-size: 12px; line-height: 1.5; color: #cbd5e1; overflow-x: auto; }
+    .code-line { padding: 2px 8px; border-radius: 4px; white-space: pre; }
+    .code-line.active { background: #0284c7; color: white; font-weight: bold; }
+    .code-line.active-return-true { background: #15803d; color: white; font-weight: bold; }
+    .code-line.active-return-false { background: #b91c1c; color: white; font-weight: bold; }
+    .line-num { color: #64748b; margin-right: 12px; user-select: none; }
+    
+    .mode-section { display: none; }
+    .mode-section.active { display: flex; flex-direction: column; width: 100%; }
+  </style>
+</head>
+<body>
+
+<h2 style="margin-bottom: 8px;">Regex Recursion & DP Execution Visualizer</h2>
+
+<div class="tab-header">
+  <button class="tab-btn active" onclick="switchMode('rec')">Recursion Trace Mode</button>
+  <button class="tab-btn" onclick="switchMode('dp')">DP Tabulation Mode</button>
+</div>
+
+<div class="main-layout">
+  
+  <!-- Left Panel -->
+  <div class="viz-panel">
+    <div class="input-section">
+      <div class="input-group">
+        <label for="input-s">String (s)</label>
+        <input type="text" id="input-s" value="aab" placeholder="e.g. aab">
+      </div>
+      <div class="input-group">
+        <label for="input-p">Pattern (p)</label>
+        <input type="text" id="input-p" value="c*a*b" placeholder="e.g. c*a*b">
+      </div>
+      <div style="display: flex; align-items: flex-end;">
+        <button class="btn-start" onclick="generateTrace()">Start Engine</button>
+      </div>
+    </div>
+
+    <!-- RECURSION VIEW -->
+    <div id="rec-mode" class="mode-section active">
+      <div class="string-display">
+        <div class="str-box">
+          <div>String s (i)</div>
+          <div class="chars" id="s-chars"></div>
+        </div>
+        <div class="str-box">
+          <div>Pattern p (j)</div>
+          <div class="chars" id="p-chars"></div>
+        </div>
+      </div>
+
+      <div class="status-card">
+        <div style="color: #eab308; font-weight: bold; text-transform: uppercase; font-size: 11px;">Execution Step</div>
+        <div class="status-text" id="status-desc">Click 'Start Engine'...</div>
+      </div>
+
+      <div class="call-stack">
+        <div class="stack-title">Call Stack (Backtracking Memory)</div>
+        <div id="stack-list"></div>
+      </div>
+    </div>
+
+    <!-- DP VIEW -->
+    <div id="dp-mode" class="mode-section">
+      <div class="status-card">
+        <div style="color: #eab308; font-weight: bold; text-transform: uppercase; font-size: 11px;">DP Step Description</div>
+        <div class="status-text" id="dp-status-desc">Initializing DP Table...</div>
+      </div>
+      <div class="dp-container" id="dp-table-container"></div>
+    </div>
+
+    <div class="controls">
+      <button id="prev-btn" onclick="prevStep()" disabled>Previous</button>
+      <button id="next-btn" onclick="nextStep()" disabled>Next Step</button>
+      <span id="step-counter" style="align-self: center; font-size: 13px; color: #94a3b8; font-family: monospace;">Step 0/0</span>
+    </div>
+  </div>
+
+  <!-- Right Panel: Code View -->
+  <div class="code-panel">
+    <div id="code-title" style="color: #38bdf8; font-size: 13px; font-weight: bold; margin-bottom: 8px; text-transform: uppercase;">Active Code View</div>
+    <div class="code-container" id="code-block"></div>
+  </div>
+
+</div>
+
+<script>
+const cppRecCode = [
+  /* 1 */ "bool helper(int i, int j, string &s, string &p) {",
+  /* 2 */ "    if (j == p.size()) {",
+  /* 3 */ "        return i == s.size(); // RETURN A (Base Case)",
+  /* 4 */ "    }",
+  /* 5 */ "    bool match = (i < s.size()) && (s[i] == p[j] || p[j] == '.');",
+  /* 6 */ "",
+  /* 7 */ "    if (j + 1 < p.size() && p[j + 1] == '*') {",
+  /* 8 */ "        bool choice1 = helper(i, j + 2); // Skip X*",
+  /* 9 */ "        if (choice1) return true;       // RETURN B (Choice 1 succeeded)",
+  /* 10*/ "        ",
+  /* 11*/ "        bool choice2 = match && helper(i + 1, j); // Consume 1 char",
+  /* 12*/ "        if (choice2) return true;       // RETURN C (Choice 2 succeeded)",
+  /* 13*/ "        ",
+  /* 14*/ "        return false;                   // RETURN D (Both choices failed)",
+  /* 15*/ "    } ",
+  /* 16*/ "    else if (match) {",
+  /* 17*/ "        return helper(i + 1, j + 1);   // RETURN E (Match single char)",
+  /* 18*/ "    } ",
+  /* 19*/ "    else {",
+  /* 20*/ "        return false;                   // RETURN F (Char mismatch)",
+  /* 21*/ "    }",
+  /* 22*/ "}"
+];
+
+const cppDpCode = [
+  /* 1 */ "bool isMatch(string s, string p) {",
+  /* 2 */ "    int m = s.size(), n = p.size();",
+  /* 3 */ "    vector<vector<bool>> dp(m + 1, vector<bool>(n + 1, false));",
+  /* 4 */ "    dp[m][n] = true; // Base Case: empty string matches empty pattern",
+  /* 5 */ "",
+  /* 6 */ "    for (int i = m; i >= 0; i--) {",
+  /* 7 */ "        for (int j = n - 1; j >= 0; j--) {",
+  /* 8 */ "            bool match = (i < m) && (s[i] == p[j] || p[j] == '.');",
+  /* 9 */ "            if (j + 1 < n && p[j + 1] == '*') {",
+  /* 10*/ "                dp[i][j] = dp[i][j + 2] || (match && dp[i + 1][j]);",
+  /* 11*/ "            } else if (match) {",
+  /* 12*/ "                dp[i][j] = dp[i + 1][j + 1];",
+  /* 13*/ "            } else {",
+  /* 14*/ "                dp[i][j] = false;",
+  /* 15*/ "            }",
+  /* 16*/ "        }",
+  /* 17*/ "    }",
+  /* 18*/ "    return dp[0][0];",
+  /* 19*/ "}"
+];
+
+let activeMode = 'rec';
+let recTrace = [];
+let dpTrace = [];
+let currentStep = 0;
+let sVal = "";
+let pVal = "";
+
+function switchMode(mode) {
+  activeMode = mode;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.mode-section').forEach(m => m.classList.remove('active'));
+  
+  if (mode === 'rec') {
+    document.querySelectorAll('.tab-btn')[0].classList.add('active');
+    document.getElementById('rec-mode').classList.add('active');
+    document.getElementById('code-title').innerText = "Active C++ Helper Function (Recursion)";
+  } else {
+    document.querySelectorAll('.tab-btn')[1].classList.add('active');
+    document.getElementById('dp-mode').classList.add('active');
+    document.getElementById('code-title').innerText = "Active C++ Tabulation Function (DP)";
+  }
+  
+  currentStep = 0;
+  renderCodeBlock();
+  render();
+}
+
+function runEngine(s, p) {
+  // 1. Generate Recursion Steps
+  recTrace = [];
+  const stack = [];
+
+  function helper(i, j) {
+    const callLabel = `helper(i=${i}, j=${j})`;
+    stack.push(callLabel);
+
+    recTrace.push({ line: 1, i, j, desc: `Entered ${callLabel}`, stack: [...stack] });
+    recTrace.push({ line: 2, i, j, desc: `Checking base case: is j == p.size() (${j} == ${p.length})?`, stack: [...stack] });
+
+    if (j === p.length) {
+      const isMatched = (i === s.length);
+      recTrace.push({
+        line: 3, i, j,
+        desc: `[RETURN A] Pattern finished! s is ${isMatched ? "also finished" : "NOT finished"}. Returning ${isMatched ? "TRUE 🎉" : "FALSE ❌"}`,
+        stack: [...stack.slice(0, -1), `${callLabel} -> ${isMatched ? "TRUE (Return A)" : "FALSE (Return A)"}`],
+        returnType: isMatched ? "true" : "false"
+      });
+      stack.pop();
+      return isMatched;
+    }
+
+    const match = (i < s.length) && (p[j] === s[i] || p[j] === '.');
+    recTrace.push({ line: 5, i, j, desc: `Evaluated match: '${s[i] || "Ø"}' vs '${p[j]}' -> ${match}`, stack: [...stack] });
+    recTrace.push({ line: 7, i, j, desc: `Checking if next char is '*': is p[${j+1}] == '*'?`, stack: [...stack] });
+
+    if (j + 1 < p.length && p[j + 1] === '*') {
+      recTrace.push({ line: 8, i, j, desc: `Executing Choice 1: helper(i=${i}, j=${j+2}) [Skip '${p[j]}*']`, stack: [...stack] });
+      const choice1 = helper(i, j + 2);
+
+      if (choice1) {
+        recTrace.push({
+          line: 9, i, j,
+          desc: `[RETURN B] Choice 1 succeeded! Returning TRUE 🎉`,
+          stack: [...stack.slice(0, -1), `${callLabel} -> TRUE (Return B)`],
+          returnType: "true"
+        });
+        stack.pop();
+        return true;
+      }
+
+      recTrace.push({ line: 11, i, j, desc: `Choice 1 returned FALSE. Now executing Choice 2: match && helper(i=${i+1}, j=${j}) [Consume char]`, stack: [...stack] });
+      let choice2 = false;
+      if (match) {
+        choice2 = helper(i + 1, j);
+      }
+
+      if (choice2) {
+        recTrace.push({
+          line: 12, i, j,
+          desc: `[RETURN C] Choice 2 succeeded! Returning TRUE 🎉`,
+          stack: [...stack.slice(0, -1), `${callLabel} -> TRUE (Return C)`],
+          returnType: "true"
+        });
+        stack.pop();
+        return true;
+      }
+
+      recTrace.push({
+        line: 14, i, j,
+        desc: `[RETURN D] Both Choice 1 and Choice 2 failed for '${p[j]}*'. Returning FALSE ❌`,
+        stack: [...stack.slice(0, -1), `${callLabel} -> FALSE (Return D)`],
+        returnType: "false"
+      });
+      stack.pop();
+      return false;
+
+    } else if (match) {
+      recTrace.push({ line: 17, i, j, desc: `Single char matched! Calling helper(i=${i+1}, j=${j+1})`, stack: [...stack] });
+      const res = helper(i + 1, j + 1);
+
+      recTrace.push({
+        line: 17, i, j,
+        desc: `[RETURN E] Single char path finished. Returning ${res ? "TRUE 🎉" : "FALSE ❌"}`,
+        stack: [...stack.slice(0, -1), `${callLabel} -> ${res ? "TRUE (Return E)" : "FALSE (Return E)"}`],
+        returnType: res ? "true" : "false"
+      });
+      stack.pop();
+      return res;
+
+    } else {
+      recTrace.push({
+        line: 20, i, j,
+        desc: `[RETURN F] Mismatch! '${s[i] || "Ø"}' does not match '${p[j]}'. Returning FALSE ❌`,
+        stack: [...stack.slice(0, -1), `${callLabel} -> FALSE (Return F)`],
+        returnType: "false"
+      });
+      stack.pop();
+      return false;
+    }
+  }
+
+  const finalRes = helper(0, 0);
+  recTrace.push({
+    line: 0, i: finalRes ? s.length : 0, j: finalRes ? p.length : 0,
+    desc: `Trace Finished! Final Result: ${finalRes ? "TRUE 🎉" : "FALSE ❌"}`,
+    stack: [`FINAL: ${finalRes ? "TRUE" : "FALSE"}`]
+  });
+
+  // 2. Generate DP Steps
+  dpTrace = [];
+  const m = s.length, n = p.length;
+  const grid = Array.from({ length: m + 1 }, () => Array(n + 1).fill(null));
+  
+  // Base case
+  grid[m][n] = true;
+  dpTrace.push({
+    line: 4, i: m, j: n,
+    desc: `Set Base Case: dp[${m}][${n}] = true (Empty string matches empty pattern)`,
+    grid: JSON.parse(JSON.stringify(grid))
+  });
+
+  for (let i = m; i >= 0; i--) {
+    for (let j = n - 1; j >= 0; j--) {
+      const match = (i < m) && (s[i] === p[j] || p[j] === '.');
+      
+      if (j + 1 < n && p[j + 1] === '*') {
+        const choice1 = grid[i][j + 2];
+        const choice2 = match && grid[i + 1][j];
+        grid[i][j] = choice1 || choice2;
+        dpTrace.push({
+          line: 10, i, j,
+          desc: `Evaluating dp[${i}][${j}] ('${p[j]}*'): Choice 1 (Skip: dp[${i}][${j+2}] = ${choice1}) || Choice 2 (Consume: ${choice2}) -> ${grid[i][j]}`,
+          grid: JSON.parse(JSON.stringify(grid))
+        });
+      } else if (match) {
+        grid[i][j] = grid[i + 1][j + 1];
+        dpTrace.push({
+          line: 12, i, j,
+          desc: `Evaluating dp[${i}][${j}] ('${p[j]}'): Single char matched! Look diagonally down-right: dp[${i+1}][${j+1}] = ${grid[i][j]}`,
+          grid: JSON.parse(JSON.stringify(grid))
+        });
+      } else {
+        grid[i][j] = false;
+        dpTrace.push({
+          line: 14, i, j,
+          desc: `Evaluating dp[${i}][${j}] ('${p[j]}'): Mismatch! Setting dp[${i}][${j}] = false`,
+          grid: JSON.parse(JSON.stringify(grid))
+        });
+      }
+    }
+  }
+
+  dpTrace.push({
+    line: 18, i: 0, j: 0,
+    desc: `Tabulation Complete! Ultimate result stored at dp[0][0] = ${grid[0][0] ? "TRUE 🎉" : "FALSE ❌"}`,
+    grid: JSON.parse(JSON.stringify(grid))
+  });
+}
+
+function generateTrace() {
+  sVal = document.getElementById("input-s").value;
+  pVal = document.getElementById("input-p").value;
+
+  if (!pVal) { alert("Pattern cannot be empty!"); return; }
+
+  runEngine(sVal, pVal);
+  currentStep = 0;
+  renderCodeBlock();
+  render();
+}
+
+function renderCodeBlock() {
+  const codeBlock = document.getElementById("code-block");
+  codeBlock.innerHTML = "";
+  const codeArr = activeMode === 'rec' ? cppRecCode : cppDpCode;
+  
+  codeArr.forEach((lineText, idx) => {
+    const lineNum = idx + 1;
+    const div = document.createElement("div");
+    div.id = `line-${lineNum}`;
+    div.className = "code-line";
+    div.innerHTML = `<span class="line-num">${lineNum < 10 ? " " + lineNum : lineNum}</span>${escapeHtml(lineText)}`;
+    codeBlock.appendChild(div);
+  });
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function render() {
+  const activeTrace = activeMode === 'rec' ? recTrace : dpTrace;
+  if (activeTrace.length === 0) return;
+  const step = activeTrace[currentStep];
+
+  if (activeMode === 'rec') {
+    // Render String & Pattern
+    const sContainer = document.getElementById("s-chars");
+    sContainer.innerHTML = "";
+    for (let idx = 0; idx <= sVal.length; idx++) {
+      const cell = document.createElement("div");
+      cell.className = "char-cell" + (idx === step.i ? " active" : "");
+      cell.innerText = idx === sVal.length ? "Ø" : sVal[idx];
+      sContainer.appendChild(cell);
+    }
+
+    const pContainer = document.getElementById("p-chars");
+    pContainer.innerHTML = "";
+    for (let idx = 0; idx <= pVal.length; idx++) {
+      const cell = document.createElement("div");
+      cell.className = "char-cell" + (idx === step.j ? " active" : "");
+      cell.innerText = idx === pVal.length ? "Ø" : pVal[idx];
+      pContainer.appendChild(cell);
+    }
+
+    // Render Status
+    document.getElementById("status-desc").innerText = step.desc;
+
+    // Render Stack
+    const stackList = document.getElementById("stack-list");
+    stackList.innerHTML = "";
+    step.stack.forEach((item, index) => {
+      const div = document.createElement("div");
+      let cls = "stack-item";
+      if (index === step.stack.length - 1) cls += " active";
+      if (item.includes("TRUE")) cls += " success";
+      if (item.includes("FALSE")) cls += " fail";
+      div.className = cls;
+      div.innerText = item;
+      stackList.appendChild(div);
+    });
+    stackList.scrollTop = stackList.scrollHeight;
+
+  } else {
+    // Render DP Table
+    document.getElementById("dp-status-desc").innerText = step.desc;
+    const tableContainer = document.getElementById("dp-table-container");
+    
+    let html = '<table class="dp-table"><thead><tr><th>i\\j</th>';
+    for (let j = 0; j <= pVal.length; j++) {
+      html += `<th>${j < pVal.length ? pVal[j] : 'Ø'} (${j})</th>`;
+    }
+    html += '</tr></thead><tbody>';
+
+    for (let i = 0; i <= sVal.length; i++) {
+      html += `<tr><th>${i < sVal.length ? sVal[i] : 'Ø'} (${i})</th>`;
+      for (let j = 0; j <= pVal.length; j++) {
+        const val = step.grid[i][j];
+        let cellClass = "";
+        if (val === true) cellClass = "cell-true";
+        else if (val === false) cellClass = "cell-false";
+        
+        if (i === step.i && j === step.j) cellClass += " cell-active";
+        
+        html += `<td class="${cellClass}">${val === null ? "" : (val ? "T" : "F")}</td>`;
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table>';
+    tableContainer.innerHTML = html;
+  }
+
+  // Highlight Code Line
+  document.querySelectorAll(".code-line").forEach(el => el.className = "code-line");
+  if (step.line > 0) {
+    const activeEl = document.getElementById(`line-${step.line}`);
+    if (activeEl) {
+      if (step.returnType === "true") activeEl.className = "code-line active-return-true";
+      else if (step.returnType === "false") activeEl.className = "code-line active-return-false";
+      else activeEl.className = "code-line active";
+    }
+  }
+
+  // Controls
+  document.getElementById("prev-btn").disabled = currentStep === 0;
+  document.getElementById("next-btn").disabled = currentStep === activeTrace.length - 1;
+  document.getElementById("step-counter").innerText = `Step ${currentStep + 1} / ${activeTrace.length}`;
+}
+
+function nextStep() {
+  const activeTrace = activeMode === 'rec' ? recTrace : dpTrace;
+  if (currentStep < activeTrace.length - 1) { currentStep++; render(); }
+}
+
+function prevStep() {
+  if (currentStep > 0) { currentStep--; render(); }
+}
+
+// Initial engine run on load
+generateTrace();
+</script>
+
+</body>
+</html>
