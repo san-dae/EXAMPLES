@@ -16,7 +16,6 @@
             color: #f8fafc;
             user-select: none;
         }
-        /* Custom Scrollbars */
         ::-webkit-scrollbar {
             width: 6px;
             height: 6px;
@@ -54,7 +53,7 @@
                 <span>3-State DFS</span>
             </button>
             <button id="btn-mode-bfs" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center space-x-2">
-                <i class="fa-solid fa-[#38bdf8] fa-filter"></i>
+                <i class="fa-solid fa-filter"></i>
                 <span>BFS (Kahn's Algo)</span>
             </button>
         </div>
@@ -66,7 +65,6 @@
         <!-- Left Sidebar: Controls & Presets -->
         <aside class="w-80 border-r border-slate-800 bg-slate-900/50 p-4 flex flex-col justify-between overflow-y-auto shrink-0 space-y-6">
             <div class="space-y-5">
-                <!-- Preset Selection -->
                 <div>
                     <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Preset Graphs</label>
                     <div class="grid grid-cols-1 gap-2">
@@ -94,7 +92,6 @@
                     </div>
                 </div>
 
-                <!-- Custom Graph Builder Tools -->
                 <div>
                     <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Build Custom Graph</label>
                     <div class="grid grid-cols-2 gap-2">
@@ -113,7 +110,6 @@
                     </button>
                 </div>
 
-                <!-- Simulation Speed -->
                 <div class="space-y-2">
                     <div class="flex justify-between items-center text-xs">
                         <span class="font-semibold text-slate-400 uppercase tracking-wider">Animation Speed</span>
@@ -123,11 +119,10 @@
                 </div>
             </div>
 
-            <!-- Legend / Legend Explanations -->
+            <!-- Legend -->
             <div id="legend-box" class="border border-slate-800 bg-slate-900/90 rounded-2xl p-4 text-xs space-y-3">
                 <span class="font-semibold text-slate-300 block mb-1">State Legend (<span id="legend-algo-name">3-State DFS</span>)</span>
                 
-                <!-- DFS Legend -->
                 <div id="dfs-legend" class="space-y-2">
                     <div class="flex items-center space-x-2.5">
                         <div class="w-3.5 h-3.5 rounded-full border border-slate-500 bg-slate-700/40"></div>
@@ -147,11 +142,10 @@
                     </div>
                 </div>
 
-                <!-- BFS Legend -->
                 <div id="bfs-legend" class="space-y-2 hidden">
                     <div class="flex items-center space-x-2.5">
                         <div class="w-3.5 h-3.5 rounded-full border border-sky-500 bg-sky-950/40"></div>
-                        <span class="text-slate-300"><strong class="text-sky-400">Badge:</strong> Current In-Degree</span>
+                        <span class="text-slate-300"><strong class="text-sky-400">Badge:</strong> In-Degree Count</span>
                     </div>
                     <div class="flex items-center space-x-2.5">
                         <div class="w-3.5 h-3.5 rounded-full bg-amber-500"></div>
@@ -159,7 +153,7 @@
                     </div>
                     <div class="flex items-center space-x-2.5">
                         <div class="w-3.5 h-3.5 rounded-full bg-emerald-500"></div>
-                        <span class="text-slate-300"><strong class="text-emerald-400">Processed:</strong> Removed from Queue</span>
+                        <span class="text-slate-300"><strong class="text-emerald-400">Processed:</strong> Popped & Saved</span>
                     </div>
                     <div class="flex items-center space-x-2.5">
                         <div class="w-3.5 h-3.5 rounded-full bg-rose-500"></div>
@@ -171,15 +165,9 @@
 
         <!-- Center Visualizer Canvas Area -->
         <main class="flex-1 flex flex-col relative bg-slate-950 overflow-hidden">
-            <!-- Canvas -->
             <div class="flex-1 relative cursor-crosshair" id="canvas-container">
                 <canvas id="graph-canvas" class="w-full h-full block"></canvas>
-                <div id="canvas-hint" class="absolute top-4 left-4 bg-slate-900/80 border border-slate-800 backdrop-blur px-3 py-1.5 rounded-xl text-xs text-slate-400">
-                    <i class="fa-solid fa-info-circle mr-1 text-indigo-400"></i>
-                    <span>Click canvas to add nodes. Drag or select nodes to connect edges.</span>
-                </div>
 
-                <!-- Verdict Overlay Banner -->
                 <div id="verdict-banner" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900/95 border-2 px-8 py-6 rounded-3xl shadow-2xl backdrop-blur text-center max-w-sm w-full transition-all scale-95 duration-300 z-30">
                     <div id="verdict-icon-bg" class="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">
                         <i id="verdict-icon" class="fa-solid"></i>
@@ -192,7 +180,7 @@
                 </div>
             </div>
 
-            <!-- Bottom Playback Control Bar -->
+            <!-- Bottom Control Bar -->
             <div class="h-20 border-t border-slate-800 bg-slate-900/90 backdrop-blur px-6 flex items-center justify-between shrink-0">
                 <div class="flex items-center space-x-3">
                     <button id="btn-back" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-200 flex items-center justify-center text-sm transition">
@@ -211,7 +199,6 @@
                     </button>
                 </div>
 
-                <!-- Progress Step Counter -->
                 <div class="flex items-center space-x-4">
                     <div class="text-right">
                         <span class="text-xs text-slate-400 block">Step Progress</span>
@@ -221,23 +208,19 @@
             </div>
         </main>
 
-        <!-- Right Sidebar: Algorithm State & Live Trace -->
+        <!-- Right Sidebar -->
         <aside class="w-80 border-l border-slate-800 bg-slate-900/50 p-4 flex flex-col justify-between overflow-y-auto shrink-0 space-y-4">
-            
-            <!-- DFS Stack or BFS Queue Panel -->
             <div class="space-y-2">
                 <div class="flex justify-between items-center">
                     <span id="stack-queue-title" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Recursion Stack</span>
                     <span id="stack-count-badge" class="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-mono text-indigo-300">Size: 0</span>
                 </div>
                 
-                <!-- Container for stack frames or queue items -->
                 <div id="data-structure-container" class="min-h-[140px] max-h-[180px] border border-slate-800 bg-slate-950/60 rounded-xl p-3 flex flex-col justify-end overflow-y-auto space-y-1.5 font-mono text-xs">
                     <div class="text-center text-slate-500 text-[11px] py-4">Stack is currently empty</div>
                 </div>
             </div>
 
-            <!-- Algorithm Trace Log -->
             <div class="flex-1 flex flex-col min-h-0 space-y-2">
                 <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Step Execution Log</span>
                 <div id="execution-log" class="flex-1 border border-slate-800 bg-slate-950/60 rounded-xl p-3 overflow-y-auto font-mono text-xs space-y-2 text-slate-300">
@@ -247,25 +230,21 @@
         </aside>
     </div>
 
-    <!-- Application Script -->
+    <!-- Script -->
     <script>
-        // Graph Data Structure
         let nodes = [];
         let edges = [];
 
-        // Application Modes & UI state
-        let currentAlgorithm = 'DFS'; // 'DFS' | 'BFS'
-        let currentTool = 'node';     // 'node' | 'edge'
+        let currentAlgorithm = 'DFS'; 
+        let currentTool = 'node';     
         let selectedNodeForEdge = null;
 
-        // Simulation State
         let steps = [];
         let currentStepIdx = -1;
         let isPlaying = false;
         let playInterval = null;
         let speed = 1000;
 
-        // Canvas Setup
         let canvas, ctx;
         const NODE_RADIUS = 22;
 
@@ -273,7 +252,6 @@
             canvas = document.getElementById('graph-canvas');
             ctx = canvas.getContext('2d');
 
-            // Attach Event Listeners
             document.getElementById('btn-mode-dfs').addEventListener('click', () => setAlgorithm('DFS'));
             document.getElementById('btn-mode-bfs').addEventListener('click', () => setAlgorithm('BFS'));
             document.getElementById('btn-preset-cycle').addEventListener('click', () => loadPreset('cycle'));
@@ -306,7 +284,6 @@
             draw();
         }
 
-        // --- PRESET GRAPHS ---
         function loadPreset(type) {
             resetSimulation();
             const w = canvas ? canvas.width : 600;
@@ -324,7 +301,7 @@
                 edges = [
                     { from: 0, to: 1 },
                     { from: 1, to: 2 },
-                    { from: 2, to: 0 }, // Cycle back edge
+                    { from: 2, to: 0 },
                     { from: 2, to: 3 }
                 ];
             } else if (type === 'cross') {
@@ -337,7 +314,7 @@
                 edges = [
                     { from: 0, to: 1 },
                     { from: 0, to: 2 },
-                    { from: 1, to: 2 }, // Cross Edge! (Visited but not cycle)
+                    { from: 1, to: 2 },
                     { from: 2, to: 3 }
                 ];
             } else if (type === 'complex') {
@@ -352,12 +329,11 @@
                     { from: 0, to: 1 },
                     { from: 1, to: 2 },
                     { from: 2, to: 3 },
-                    { from: 3, to: 1 }, // Cycle 1->2->3->1
+                    { from: 3, to: 1 },
                     { from: 0, to: 4 }
                 ];
             }
             rebuildSteps();
-            draw();
         }
 
         function clearGraph() {
@@ -365,7 +341,6 @@
             nodes = [];
             edges = [];
             rebuildSteps();
-            draw();
         }
 
         function setAlgorithm(algo) {
@@ -392,7 +367,7 @@
                 dfsLegend.classList.add('hidden');
                 stackTitle.innerText = "BFS Queue (In-degree = 0)";
             }
-            resetSimulation();
+            rebuildSteps();
         }
 
         function setTool(tool) {
@@ -411,7 +386,6 @@
             draw();
         }
 
-        // --- CANVAS INTERACTION ---
         function setupCanvasInteraction() {
             canvas.addEventListener('click', (e) => {
                 if (isPlaying) return;
@@ -425,7 +399,6 @@
                     if (!clickedNode) {
                         nodes.push({ id: nodes.length, x, y });
                         rebuildSteps();
-                        draw();
                     }
                 } else if (currentTool === 'edge') {
                     if (clickedNode) {
@@ -447,7 +420,6 @@
             });
         }
 
-        // --- ALGORITHM STEP GENERATORS ---
         function rebuildSteps() {
             steps = [];
             if (currentAlgorithm === 'DFS') {
@@ -455,12 +427,14 @@
             } else {
                 generateBFSSteps();
             }
-            currentStepIdx = -1;
+            currentStepIdx = steps.length > 0 ? 0 : -1;
             updateUI();
         }
 
         function generateDFSSteps() {
             const V = nodes.length;
+            if (V === 0) return;
+
             const visited = new Array(V).fill(0);
             const adj = Array.from({ length: V }, () => []);
             edges.forEach(e => adj[e.from].push(e.to));
@@ -499,21 +473,21 @@
                         addStep(`Neighbor ${v} is in State 0 (Unvisited). Recurse into DFS(${v}).`, { from: u, to: v });
                         dfs(v);
                     } else if (visited[v] === 2) {
-                        addStep(`Neighbor ${v} is in State 2 (Fully Processed). Cross/Forward edge detected — no cycle here. Skip.`, { from: u, to: v });
+                        addStep(`Neighbor ${v} is in State 2 (Fully Processed). Cross Edge detected — no cycle. Skip.`, { from: u, to: v });
                     }
                 }
 
                 if (!cycleFound) {
                     visited[u] = 2;
                     stack.pop();
-                    addStep(`Finished all neighbors of node ${u}. Backtrack: Mark State 2 (Processed) & pop from stack.`, null);
+                    addStep(`Finished node ${u}. Backtrack: Mark State 2 (Processed) & pop from stack.`, null);
                 }
             }
 
             for (let i = 0; i < V; i++) {
                 if (cycleFound) break;
                 if (visited[i] === 0) {
-                    addStep(`Outer loop: Starting unvisited component at node ${i}.`);
+                    addStep(`Outer loop: Starting component at node ${i}.`);
                     dfs(i);
                 }
             }
@@ -525,6 +499,8 @@
 
         function generateBFSSteps() {
             const V = nodes.length;
+            if (V === 0) return;
+
             const inDegree = new Array(V).fill(0);
             const adj = Array.from({ length: V }, () => []);
 
@@ -547,7 +523,7 @@
                 });
             }
 
-            addStep("Initial State: Calculate in-degrees for all nodes.");
+            addStep("Initial State: Calculated in-degrees for all vertices.");
 
             for (let i = 0; i < V; i++) {
                 if (inDegree[i] === 0) {
@@ -564,11 +540,11 @@
                 processed.push(u);
                 count++;
 
-                addStep(`Dequeue node ${u}. Add to Processed order (Count: ${count}/${V}).`, null);
+                addStep(`Dequeue node ${u}. Add to Topological Order (Processed: ${count}/${V}).`, null);
 
                 for (let v of adj[u]) {
                     inDegree[v]--;
-                    addStep(`Decrement In-Degree of neighbor ${v} (now ${inDegree[v]}) because edge (${u} → ${v}) was processed.`, { from: u, to: v });
+                    addStep(`Edge (${u} → ${v}) processed. Reduced node ${v}'s In-Degree to ${inDegree[v]}.`, { from: u, to: v });
 
                     if (inDegree[v] === 0) {
                         queue.push(v);
@@ -578,13 +554,12 @@
             }
 
             if (count !== V) {
-                addStep(`BFS Complete: Processed count (${count}) < Total Vertices (${V}). Stranded nodes remain with In-Degree > 0! CYCLE DETECTED!`, null, true);
+                addStep(`BFS Complete: Processed count (${count}) < Total Vertices (${V}). Nodes stranded with In-Degree > 0! CYCLE DETECTED!`, null, true);
             } else {
-                addStep(`BFS Complete: Processed all ${count} / ${V} nodes successfully! Valid Topological Order found — Cycle = False.`);
+                addStep(`BFS Complete: Processed all ${count} / ${V} nodes! Valid Topological Order found — Cycle = False.`);
             }
         }
 
-        // --- SIMULATION PLAYBACK CONTROLS ---
         function stepNext() {
             if (currentStepIdx < steps.length - 1) {
                 currentStepIdx++;
@@ -643,7 +618,6 @@
             }
         }
 
-        // --- RENDER & UI UPDATE LOGIC ---
         function updateUI() {
             draw();
             updateLogAndDataStructures();
@@ -735,7 +709,7 @@
                 stackBadge.innerText = `Queue: ${queue.length} | Done: ${processed.length}`;
                 
                 let html = `<div class="space-y-2">`;
-                html += `<div><span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Front Queue (In-degree=0):</span><div class="flex flex-wrap gap-1">`;
+                html += `<div><span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Queue (In-degree=0):</span><div class="flex flex-wrap gap-1">`;
                 if (queue.length === 0) {
                     html += `<span class="text-slate-600 text-[11px] italic">Queue empty</span>`;
                 } else {
@@ -758,7 +732,6 @@
             }
         }
 
-        // --- DRAWING CANVAS ---
         function draw() {
             if (!ctx) return;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -791,16 +764,16 @@
 
                 if (currentAlgorithm === 'DFS') {
                     const state = step ? step.visited[node.id] : 0;
-                    if (state === 1) { // Visiting / Stack
+                    if (state === 1) {
                         fillColor = '#f59e0b';
                         strokeColor = '#fbbf24';
                         textColor = '#020617';
-                    } else if (state === 2) { // Processed
+                    } else if (state === 2) {
                         fillColor = '#10b981';
                         strokeColor = '#34d399';
                         textColor = '#020617';
                     }
-                } else { // BFS Mode
+                } else {
                     const inDeg = step ? step.inDegree[node.id] : 0;
                     const isProcessed = step ? step.processed.includes(node.id) : false;
                     const isInQueue = step ? step.queue.includes(node.id) : false;
