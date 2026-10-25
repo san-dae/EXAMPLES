@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Directed Graph Cycle Detection Visualizer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            user-select: none;
+        }
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 3px;
+        }
+        canvas {
+            touch-action: none;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-slate-950 text-slate-100">
+
+    <!-- Header / Navbar -->
+    <header class="h-16 border-b border-slate-800 bg-slate-900/80 backdrop-blur px-6 flex items-center justify-between shrink-0">
+        <div class="flex items-center space-x-3">
+            <div class="w-9 h-9 rounded-xl bg-indigo-600/20 border border-indigo-500/40 flex items-center justify-center text-indigo-400 font-bold text-lg">
+                <i class="fa-solid fa-diagram-project"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-semibold leading-none text-slate-100">Directed Graph Cycle Simulator</h1>
+                <p class="text-xs text-slate-400 mt-1">Compare 3-State DFS (Recursion Stack) vs. BFS (Kahn's Algorithm)</p>
+            </div>
+        </div>
+
+        <!-- Mode Toggle Switcher -->
+        <div class="flex items-center bg-slate-800/80 p-1 rounded-xl border border-slate-700/60">
+            <button id="btn-mode-dfs" onclick="setAlgorithm('DFS')" class="px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 bg-indigo-600 text-white shadow-md">
+                <i class="fa-solid fa-layer-group"></i>
+                <span>3-State DFS</span>
+            </button>
+            <button id="btn-mode-bfs" onclick="setAlgorithm('BFS')" class="px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center space-x-2">
+                <i class="fa-solid fa-[#38bdf8] fa-filter"></i>
+                <span>BFS (Kahn's Algo)</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Grid -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Sidebar: Controls & Presets -->
+        <aside class="w-80 border-r border-slate-800 bg-slate-900/50 p-4 flex flex-col justify-between overflow-y-auto shrink-0 space-y-6">
+            <div class="space-y-5">
+                <!-- Preset Selection -->
+                <div>
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Preset Graphs</label>
+                    <div class="grid grid-cols-1 gap-2">
+                        <button onclick="loadPreset('cycle')" class="w-full text-left px-3 py-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800 hover:border-indigo-500/50 transition flex items-center justify-between group">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+                                <span class="text-xs font-medium text-slate-200">Graph with Cycle</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs text-slate-500 group-hover:text-indigo-400"></i>
+                        </button>
+                        <button onclick="loadPreset('cross')" class="w-full text-left px-3 py-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800 hover:border-indigo-500/50 transition flex items-center justify-between group">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                <span class="text-xs font-medium text-slate-200">DAG with Cross Edges</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs text-slate-500 group-hover:text-indigo-400"></i>
+                        </button>
+                        <button onclick="loadPreset('complex')" class="w-full text-left px-3 py-2.5 rounded-xl border border-slate-700/60 bg-slate-800/40 hover:bg-slate-800 hover:border-indigo-500/50 transition flex items-center justify-between group">
+                            <div class="flex items-center space-x-2.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                <span class="text-xs font-medium text-slate-200">Complex Graph</span>
+                            </div>
+                            <i class="fa-solid fa-chevron-right text-xs text-slate-500 group-hover:text-indigo-400"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Custom Graph Builder Tools -->
+                <div>
+                    <label class="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-2">Build Custom Graph</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button id="tool-node" onclick="setTool('node')" class="px-3 py-2 rounded-xl border border-indigo-500/80 bg-indigo-500/10 text-indigo-300 text-xs font-medium flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <span>Add Node</span>
+                        </button>
+                        <button id="tool-edge" onclick="setTool('edge')" class="px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center justify-center space-x-2">
+                            <i class="fa-solid fa-arrow-right font-bold"></i>
+                            <span>Add Edge</span>
+                        </button>
+                    </div>
+                    <button onclick="clearGraph()" class="w-full mt-2 px-3 py-2 rounded-xl border border-slate-800 bg-slate-900/80 hover:bg-rose-950/40 hover:border-rose-800/50 hover:text-rose-400 text-slate-400 text-xs font-medium transition flex items-center justify-center space-x-2">
+                        <i class="fa-solid fa-trash-can"></i>
+                        <span>Clear Graph</span>
+                    </button>
+                </div>
+
+                <!-- Simulation Speed -->
+                <div class="space-y-2">
+                    <div class="flex justify-between items-center text-xs">
+                        <span class="font-semibold text-slate-400 uppercase tracking-wider">Animation Speed</span>
+                        <span id="speed-label" class="font-mono text-indigo-400">1.0s</span>
+                    </div>
+                    <input type="range" id="speed-slider" min="200" max="2500" value="1000" step="100" class="w-full accent-indigo-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer" oninput="updateSpeed(this.value)">
+                </div>
+            </div>
+
+            <!-- Legend / Legend Explanations -->
+            <div id="legend-box" class="border border-slate-800 bg-slate-900/90 rounded-2xl p-4 text-xs space-y-3">
+                <span class="font-semibold text-slate-300 block mb-1">State Legend (<span id="legend-algo-name">3-State DFS</span>)</span>
+                
+                <!-- DFS Legend -->
+                <div id="dfs-legend" class="space-y-2">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full border border-slate-500 bg-slate-700/40"></div>
+                        <span class="text-slate-300"><strong class="text-slate-200">State 0:</strong> Unvisited</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></div>
+                        <span class="text-slate-300"><strong class="text-amber-400">State 1:</strong> Visiting / In Stack</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></div>
+                        <span class="text-slate-300"><strong class="text-emerald-400">State 2:</strong> Fully Processed</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></div>
+                        <span class="text-slate-300"><strong class="text-rose-400">Back Edge:</strong> Cycle Trigger!</span>
+                    </div>
+                </div>
+
+                <!-- BFS Legend -->
+                <div id="bfs-legend" class="space-y-2 hidden">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full border border-sky-500 bg-sky-950/40"></div>
+                        <span class="text-slate-300"><strong class="text-sky-400">Badge:</strong> Current In-Degree</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full bg-amber-500"></div>
+                        <span class="text-slate-300"><strong class="text-amber-400">In Queue:</strong> In-Degree reached 0</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full bg-emerald-500"></div>
+                        <span class="text-slate-300"><strong class="text-emerald-400">Processed:</strong> Removed from Queue</span>
+                    </div>
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-3.5 h-3.5 rounded-full bg-rose-500"></div>
+                        <span class="text-slate-300"><strong class="text-rose-400">Stranded:</strong> In-Degree &gt; 0 (Cycle)</span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center Visualizer Canvas Area -->
+        <main class="flex-1 flex flex-col relative bg-slate-950 overflow-hidden">
+            <!-- Canvas -->
+            <div class="flex-1 relative cursor-crosshair" id="canvas-container">
+                <canvas id="graph-canvas" class="w-full h-full block"></canvas>
+                <div id="canvas-hint" class="absolute top-4 left-4 bg-slate-900/80 border border-slate-800 backdrop-blur px-3 py-1.5 rounded-xl text-xs text-slate-400">
+                    <i class="fa-solid fa-info-circle mr-1 text-indigo-400"></i>
+                    <span>Click canvas to add nodes. Drag between nodes to connect edges.</span>
+                </div>
+
+                <!-- Verdict Overlay Banner -->
+                <div id="verdict-banner" class="hidden absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-slate-900/95 border-2 px-8 py-6 rounded-3xl shadow-2xl backdrop-blur text-center max-w-sm w-full transition-all scale-95 duration-300 z-30">
+                    <div id="verdict-icon-bg" class="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg">
+                        <i id="verdict-icon" class="fa-solid"></i>
+                    </div>
+                    <h2 id="verdict-title" class="text-xl font-bold mb-1">Cycle Detected!</h2>
+                    <p id="verdict-desc" class="text-xs text-slate-400 mb-5">The graph contains at least one directed back-edge loop.</p>
+                    <button onclick="resetSimulation()" class="w-full py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-semibold text-white transition">
+                        Reset & Try Again
+                    </button>
+                </div>
+            </div>
+
+            <!-- Bottom Playback Control Bar -->
+            <div class="h-20 border-t border-slate-800 bg-slate-900/90 backdrop-blur px-6 flex items-center justify-between shrink-0">
+                <div class="flex items-center space-x-3">
+                    <button onclick="stepBack()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-200 flex items-center justify-center text-sm transition">
+                        <i class="fa-solid fa-backward-step"></i>
+                    </button>
+                    <button id="btn-play" onclick="togglePlay()" class="h-10 px-5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs flex items-center space-x-2 shadow-lg shadow-indigo-600/30 transition">
+                        <i id="icon-play" class="fa-solid fa-play"></i>
+                        <span id="text-play">Auto Play</span>
+                    </button>
+                    <button onclick="stepNext()" class="w-10 h-10 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700/60 text-slate-200 flex items-center justify-center text-sm transition">
+                        <i class="fa-solid fa-forward-step"></i>
+                    </button>
+                    <button onclick="resetSimulation()" class="h-10 px-4 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-slate-400 hover:text-slate-200 text-xs font-medium transition flex items-center space-x-2">
+                        <i class="fa-solid fa-rotate-left"></i>
+                        <span>Reset</span>
+                    </button>
+                </div>
+
+                <!-- Progress Step Counter -->
+                <div class="flex items-center space-x-4">
+                    <div class="text-right">
+                        <span class="text-xs text-slate-400 block">Step Progress</span>
+                        <span id="step-counter" class="text-sm font-mono font-bold text-indigo-400">0 / 0</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Sidebar: Algorithm State & Live Trace -->
+        <aside class="w-80 border-l border-slate-800 bg-slate-900/50 p-4 flex flex-col justify-between overflow-y-auto shrink-0 space-y-4">
+            
+            <!-- DFS Stack or BFS Queue Panel -->
+            <div class="space-y-2">
+                <div class="flex justify-between items-center">
+                    <span id="stack-queue-title" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Active Recursion Stack</span>
+                    <span id="stack-count-badge" class="px-2 py-0.5 rounded-md bg-slate-800 text-[10px] font-mono text-indigo-300">Size: 0</span>
+                </div>
+                
+                <!-- Container for stack frames or queue items -->
+                <div id="data-structure-container" class="min-h-[140px] max-h-[180px] border border-slate-800 bg-slate-950/60 rounded-xl p-3 flex flex-col justify-end overflow-y-auto space-y-1.5 font-mono text-xs">
+                    <div class="text-center text-slate-500 text-[11px] py-4">Stack is currently empty</div>
+                </div>
+            </div>
+
+            <!-- Algorithm Trace Log -->
+            <div class="flex-1 flex flex-col min-h-0 space-y-2">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Step Execution Log</span>
+                <div id="execution-log" class="flex-1 border border-slate-800 bg-slate-950/60 rounded-xl p-3 overflow-y-auto font-mono text-xs space-y-2 text-slate-300">
+                    <div class="text-slate-500 text-xs italic">Press Step Next or Auto Play to start tracing.</div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Application Script -->
+    <script>
+        // Graph Data Structure
+        let nodes = [];
+        let edges = [];
+
+        // Application Modes & UI state
+        let currentAlgorithm = 'DFS'; // 'DFS' | 'BFS'
+        let currentTool = 'node';     // 'node' | 'edge'
+        let selectedNodeForEdge = null;
+
+        // Simulation State
+        let steps = [];
+        let currentStepIdx = -1;
+        let isPlaying = false;
+        let playInterval = null;
+        let speed = 1000;
+
+        // Canvas Setup
+        const canvas = document.getElementById('graph-canvas');
+        const ctx = canvas.getContext('2d');
+        const NODE_RADIUS = 22;
+
+        window.onload = () => {
+            resizeCanvas();
+            loadPreset('cycle');
+            window.addEventListener('resize', resizeCanvas);
+            setupCanvasInteraction();
+        };
+
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            draw();
+        }
+
+        // --- PRESET GRAPHS ---
+        function loadPreset(type) {
+            resetSimulation();
+            const w = canvas.width || 600;
+            const h = canvas.height || 400;
+            const cx = w / 2;
+            const cy = h / 2;
+
+            if (type === 'cycle') {
+                nodes = [
+                    { id: 0, x: cx - 120, y: cy - 80 },
+                    { id: 1, x: cx + 120, y: cy - 80 },
+                    { id: 2, x: cx + 120, y: cy + 80 },
+                    { id: 3, x: cx - 120, y: cy + 80 }
+                ];
+                edges = [
+                    { from: 0, to: 1 },
+                    { from: 1, to: 2 },
+                    { from: 2, to: 0 }, // Cycle back edge
+                    { from: 2, to: 3 }
+                ];
+            } else if (type === 'cross') {
+                nodes = [
+                    { id: 0, x: cx - 140, y: cy },
+                    { id: 1, x: cx, y: cy - 90 },
+                    { id: 2, x: cx, y: cy + 90 },
+                    { id: 3, x: cx + 140, y: cy }
+                ];
+                edges = [
+                    { from: 0, to: 1 },
+                    { from: 0, to: 2 },
+                    { from: 1, to: 2 }, // Cross Edge! (Visited but not cycle)
+                    { from: 2, to: 3 }
+                ];
+            } else if (type === 'complex') {
+                nodes = [
+                    { id: 0, x: cx - 160, y: cy - 90 },
+                    { id: 1, x: cx, y: cy - 120 },
+                    { id: 2, x: cx + 160, y: cy - 90 },
+                    { id: 3, x: cx + 80, y: cy + 80 },
+                    { id: 4, x: cx - 80, y: cy + 80 }
+                ];
+                edges = [
+                    { from: 0, to: 1 },
+                    { from: 1, to: 2 },
+                    { from: 2, to: 3 },
+                    { from: 3, to: 1 }, // Cycle 1->2->3->1
+                    { from: 0, to: 4 }
+                ];
+            }
+            rebuildSteps();
+            draw();
+        }
+
+        function clearGraph() {
+            resetSimulation();
+            nodes = [];
+            edges = [];
+            rebuildSteps();
+            draw();
+        }
+
+        function setAlgorithm(algo) {
+            currentAlgorithm = algo;
+            const btnDfs = document.getElementById('btn-mode-dfs');
+            const btnBfs = document.getElementById('btn-mode-bfs');
+            const legendAlgo = document.getElementById('legend-algo-name');
+            const dfsLegend = document.getElementById('dfs-legend');
+            const bfsLegend = document.getElementById('bfs-legend');
+            const stackTitle = document.getElementById('stack-queue-title');
+
+            if (algo === 'DFS') {
+                btnDfs.className = "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 bg-indigo-600 text-white shadow-md";
+                btnBfs.className = "px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center space-x-2";
+                legendAlgo.innerText = "3-State DFS";
+                dfsLegend.classList.remove('hidden');
+                bfsLegend.classList.add('hidden');
+                stackTitle.innerText = "Active Recursion Stack";
+            } else {
+                btnBfs.className = "px-4 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center space-x-2 bg-indigo-600 text-white shadow-md";
+                btnDfs.className = "px-4 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center space-x-2";
+                legendAlgo.innerText = "BFS (Kahn's)";
+                bfsLegend.classList.remove('hidden');
+                dfsLegend.classList.add('hidden');
+                stackTitle.innerText = "BFS Queue (In-degree = 0)";
+            }
+            resetSimulation();
+        }
+
+        function setTool(tool) {
+            currentTool = tool;
+            selectedNodeForEdge = null;
+            const btnNode = document.getElementById('tool-node');
+            const btnEdge = document.getElementById('tool-edge');
+
+            if (tool === 'node') {
+                btnNode.className = "px-3 py-2 rounded-xl border border-indigo-500/80 bg-indigo-500/10 text-indigo-300 text-xs font-medium flex items-center justify-center space-x-2";
+                btnEdge.className = "px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center justify-center space-x-2";
+            } else {
+                btnEdge.className = "px-3 py-2 rounded-xl border border-indigo-500/80 bg-indigo-500/10 text-indigo-300 text-xs font-medium flex items-center justify-center space-x-2";
+                btnNode.className = "px-3 py-2 rounded-xl border border-slate-700 bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-medium flex items-center justify-center space-x-2";
+            }
+            draw();
+        }
+
+        // --- CANVAS INTERACTION ---
+        function setupCanvasInteraction() {
+            canvas.addEventListener('click', (e) => {
+                if (isPlaying) return;
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+
+                const clickedNode = nodes.find(n => Math.hypot(n.x - x, n.y - y) <= NODE_RADIUS);
+
+                if (currentTool === 'node') {
+                    if (!clickedNode) {
+                        nodes.push({ id: nodes.length, x, y });
+                        rebuildSteps();
+                        draw();
+                    }
+                } else if (currentTool === 'edge') {
+                    if (clickedNode) {
+                        if (!selectedNodeForEdge) {
+                            selectedNodeForEdge = clickedNode;
+                        } else {
+                            if (selectedNodeForEdge.id !== clickedNode.id) {
+                                // Add edge if not already present
+                                const exists = edges.some(e => e.from === selectedNodeForEdge.id && e.to === clickedNode.id);
+                                if (!exists) {
+                                    edges.push({ from: selectedNodeForEdge.id, to: clickedNode.id });
+                                    rebuildSteps();
+                                }
+                            }
+                            selectedNodeForEdge = null;
+                        }
+                        draw();
+                    }
+                }
+            });
+        }
+
+        // --- ALGORITHM STEP GENERATORS ---
+        function rebuildSteps() {
+            steps = [];
+            if (currentAlgorithm === 'DFS') {
+                generateDFSSteps();
+            } else {
+                generateBFSSteps();
+            }
+            currentStepIdx = -1;
+            updateUI();
+        }
+
+        // 1. 3-State DFS Algorithm Simulation Steps
+        function generateDFSSteps() {
+            const V = nodes.length;
+            const visited = new Array(V).fill(0); // 0: Unvisited, 1: Visiting (Stack), 2: Processed
+            const adj = Array.from({ length: V }, () => []);
+            edges.forEach(e => adj[e.from].push(e.to));
+
+            const stack = [];
+
+            function addStep(log, activeEdge = null, cycleDetected = false) {
+                steps.push({
+                    visited: [...visited],
+                    stack: [...stack],
+                    log,
+                    activeEdge,
+                    cycleDetected
+                });
+            }
+
+            addStep("Initial State: All nodes set to State 0 (Unvisited).");
+
+            let cycleFound = false;
+
+            function dfs(u) {
+                visited[u] = 1; // Mark Visiting
+                stack.push(u);
+                addStep(`Enter DFS(node ${u}). Mark State 1 (Visiting / On Stack).`, null);
+
+                for (let v of adj[u]) {
+                    if (cycleFound) return;
+
+                    addStep(`Check directed edge (${u} → ${v})`, { from: u, to: v });
+
+                    if (visited[v] === 1) {
+                        // BACK EDGE FOUND!
+                        addStep(`CRITICAL: Neighbor ${v} is already in State 1 (Visiting)! BACK EDGE DETECTED! Cycle exists!`, { from: u, to: v }, true);
+                        cycleFound = true;
+                        return;
+                    } else if (visited[v] === 0) {
+                        addStep(`Neighbor ${v} is in State 0 (Unvisited). Recurse into DFS(${v}).`, { from: u, to: v });
+                        dfs(v);
+                    } else if (visited[v] === 2) {
+                        addStep(`Neighbor ${v} is in State 2 (Fully Processed). Cross/Forward edge detected — no cycle here. Skip.`, { from: u, to: v });
+                    }
+                }
+
+                if (!cycleFound) {
+                    visited[u] = 2; // Mark Processed
+                    stack.pop();
+                    addStep(`Finished all neighbors of node ${u}. Backtrack: Mark State 2 (Processed) & pop from stack.`, null);
+                }
+            }
+
+            for (let i = 0; i < V; i++) {
+                if (cycleFound) break;
+                if (visited[i] === 0) {
+                    addStep(`Outer loop: Starting unvisited component at node ${i}.`);
+                    dfs(i);
+                }
+            }
+
+            if (!cycleFound) {
+                addStep("DFS Complete: No back edges hit. Graph is a Directed Acyclic Graph (DAG) — Cycle = False.");
+            }
+        }
+
+        // 2. BFS (Kahn's Algorithm) Simulation Steps
+        function generateBFSSteps() {
+            const V = nodes.length;
+            const inDegree = new Array(V).fill(0);
+            const adj = Array.from({ length: V }, () => []);
+
+            edges.forEach(e => {
+                adj[e.from].push(e.to);
+                inDegree[e.to]++;
+            });
+
+            const queue = [];
+            const processed = [];
+            
+            function addStep(log, activeEdge = null, cycleDetected = false) {
+                steps.push({
+                    inDegree: [...inDegree],
+                    queue: [...queue],
+                    processed: [...processed],
+                    log,
+                    activeEdge,
+                    cycleDetected
+                });
+            }
+
+            addStep("Initial State: Calculate in-degrees for all nodes.");
+
+            // Push all nodes with in-degree 0
+            for (let i = 0; i < V; i++) {
+                if (inDegree[i] === 0) {
+                    queue.push(i);
+                }
+            }
+
+            addStep(`Identified nodes with initial In-Degree = 0: [${queue.join(', ')}]. Enqueue them.`);
+
+            let count = 0;
+
+            while (queue.length > 0) {
+                const u = queue.shift();
+                processed.push(u);
+                count++;
+
+                addStep(`Dequeue node ${u}. Add to Processed order (Count: ${count}/${V}).`, null);
+
+                for (let v of adj[u]) {
+                    inDegree[v]--;
+                    addStep(`Decrement In-Degree of neighbor ${v} (now ${inDegree[v]}) because edge (${u} → ${v}) was processed.`, { from: u, to: v });
+
+                    if (inDegree[v] === 0) {
+                        queue.push(v);
+                        addStep(`In-Degree of node ${v} reached 0! Push node ${v} to Queue.`, { from: u, to: v });
+                    }
+                }
+            }
+
+            if (count !== V) {
+                addStep(`BFS Complete: Processed count (${count}) < Total Vertices (${V}). Stranded nodes remain with In-Degree > 0! CYCLE DETECTED!`, null, true);
+            } else {
+                addStep(`BFS Complete: Processed all ${count} / ${V} nodes successfully! Valid Topological Order found — Cycle = False.`);
+            }
+        }
+
+        // --- SIMULATION PLAYBACK CONTROLS ---
+        function stepNext() {
+            if (currentStepIdx < steps.length - 1) {
+                currentStepIdx++;
+                updateUI();
+            } else {
+                pause();
+            }
+        }
+
+        function stepBack() {
+            if (currentStepIdx > 0) {
+                currentStepIdx--;
+                updateUI();
+            }
+        }
+
+        function togglePlay() {
+            if (isPlaying) {
+                pause();
+            } else {
+                if (currentStepIdx >= steps.length - 1) {
+                    currentStepIdx = 0;
+                }
+                isPlaying = true;
+                document.getElementById('icon-play').className = "fa-solid fa-pause";
+                document.getElementById('text-play').innerText = "Pause";
+                playInterval = setInterval(() => {
+                    if (currentStepIdx < steps.length - 1) {
+                        stepNext();
+                    } else {
+                        pause();
+                    }
+                }, speed);
+            }
+        }
+
+        function pause() {
+            isPlaying = false;
+            if (playInterval) clearInterval(playInterval);
+            document.getElementById('icon-play').className = "fa-solid fa-play";
+            document.getElementById('text-play').innerText = "Auto Play";
+        }
+
+        function resetSimulation() {
+            pause();
+            currentStepIdx = steps.length > 0 ? 0 : -1;
+            updateUI();
+        }
+
+        function updateSpeed(val) {
+            speed = 2700 - parseInt(val);
+            document.getElementById('speed-label').innerText = (speed / 1000).toFixed(1) + 's';
+            if (isPlaying) {
+                pause();
+                togglePlay();
+            }
+        }
+
+        // --- RENDER & UI UPDATE LOGIC ---
+        function updateUI() {
+            draw();
+            updateLogAndDataStructures();
+
+            // Step counter
+            const counter = document.getElementById('step-counter');
+            counter.innerText = `${Math.max(0, currentStepIdx + 1)} / ${steps.length}`;
+
+            // Verdict Overlay
+            const verdict = document.getElementById('verdict-banner');
+            const step = steps[currentStepIdx];
+
+            if (step && currentStepIdx === steps.length - 1) {
+                verdict.classList.remove('hidden');
+                verdict.classList.remove('scale-95');
+                verdict.classList.add('scale-100');
+
+                const iconBg = document.getElementById('verdict-icon-bg');
+                const icon = document.getElementById('verdict-icon');
+                const title = document.getElementById('verdict-title');
+                const desc = document.getElementById('verdict-desc');
+
+                if (step.cycleDetected) {
+                    iconBg.className = "w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg bg-rose-500/20 text-rose-400 border border-rose-500/40";
+                    icon.className = "fa-solid fa-circle-exclamation";
+                    title.innerText = "Cycle Detected! (True)";
+                    title.className = "text-xl font-bold mb-1 text-rose-400";
+                    desc.innerText = currentAlgorithm === 'DFS' 
+                        ? "A back-edge was found targeting an active node on the recursion stack." 
+                        : "Graph contains dependency loops preventing in-degrees from reaching 0.";
+                } else {
+                    iconBg.className = "w-16 h-16 rounded-2xl mx-auto flex items-center justify-center text-3xl mb-3 shadow-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+                    icon.className = "fa-solid fa-circle-check";
+                    title.innerText = "No Cycle (False / DAG)";
+                    title.className = "text-xl font-bold mb-1 text-emerald-400";
+                    desc.innerText = "All nodes were cleanly processed without circular dependency loops.";
+                }
+            } else {
+                verdict.classList.add('hidden');
+            }
+        }
+
+        function updateLogAndDataStructures() {
+            const dsContainer = document.getElementById('data-structure-container');
+            const logContainer = document.getElementById('execution-log');
+            const stackBadge = document.getElementById('stack-count-badge');
+
+            if (currentStepIdx < 0 || !steps[currentStepIdx]) {
+                dsContainer.innerHTML = `<div class="text-center text-slate-500 text-[11px] py-4">Data structure empty</div>`;
+                logContainer.innerHTML = `<div class="text-slate-500 text-xs italic">Press Step Next or Auto Play to start tracing.</div>`;
+                stackBadge.innerText = "Size: 0";
+                return;
+            }
+
+            const step = steps[currentStepIdx];
+
+            // Update Log
+            let logHtml = "";
+            for (let i = 0; i <= currentStepIdx; i++) {
+                const isCurrent = (i === currentStepIdx);
+                const s = steps[i];
+                const highlightClass = isCurrent ? "text-indigo-300 font-semibold bg-indigo-950/40 border-l-2 border-indigo-400 pl-2 py-0.5 rounded-r" : "text-slate-400 opacity-70";
+                const cycleStyle = s.cycleDetected ? "text-rose-400 font-bold" : "";
+                
+                logHtml += `<div class="${highlightClass} ${cycleStyle}">
+                    <span class="text-[10px] text-slate-600 mr-1">[Step ${i+1}]</span> ${s.log}
+                </div>`;
+            }
+            logContainer.innerHTML = logHtml;
+            logContainer.scrollTop = logContainer.scrollHeight;
+
+            // Update Data Structure Panel (Stack for DFS, Queue/Processed for BFS)
+            if (currentAlgorithm === 'DFS') {
+                const stack = step.stack;
+                stackBadge.innerText = `Depth: ${stack.length}`;
+                if (stack.length === 0) {
+                    dsContainer.innerHTML = `<div class="text-center text-slate-500 text-[11px] py-4">Stack is empty (Top of recursion)</div>`;
+                } else {
+                    let html = `<div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Stack (Top on Right):</div><div class="flex flex-wrap gap-1.5">`;
+                    stack.forEach((nodeId, idx) => {
+                        const isTop = (idx === stack.length - 1);
+                        html += `<div class="px-2.5 py-1 rounded-lg ${isTop ? 'bg-amber-500 text-slate-950 font-bold shadow-md shadow-amber-500/30' : 'bg-slate-800 text-amber-300 border border-amber-500/30'} flex items-center space-x-1">
+                            <span>Node ${nodeId}</span>
+                            ${isTop ? '<span class="text-[9px] uppercase bg-slate-950/40 text-amber-200 px-1 rounded">Top</span>' : ''}
+                        </div>`;
+                    });
+                    html += `</div>`;
+                    dsContainer.innerHTML = html;
+                }
+            } else { // BFS Mode
+                const queue = step.queue;
+                const processed = step.processed;
+                stackBadge.innerText = `Queue: ${queue.length} | Done: ${processed.length}`;
+                
+                let html = `<div class="space-y-2">`;
+                // Queue section
+                html += `<div><span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Front Queue (In-degree=0):</span><div class="flex flex-wrap gap-1">`;
+                if (queue.length === 0) {
+                    html += `<span class="text-slate-600 text-[11px] italic">Queue empty</span>`;
+                } else {
+                    queue.forEach(nodeId => {
+                        html += `<span class="px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs">Node ${nodeId}</span>`;
+                    });
+                }
+                html += `</div></div>`;
+
+                // Processed Order
+                html += `<div><span class="text-[10px] text-slate-400 uppercase tracking-wider block mb-1">Topological Order:</span><div class="flex flex-wrap gap-1">`;
+                if (processed.length === 0) {
+                    html += `<span class="text-slate-600 text-[11px] italic">None processed yet</span>`;
+                } else {
+                    processed.forEach(nodeId => {
+                        html += `<span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold text-xs">Node ${nodeId}</span>`;
+                    });
+                }
+                html += `</div></div></div>`;
+                dsContainer.innerHTML = html;
+            }
+        }
+
+        // --- DRAWING CANVAS ---
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const step = steps[currentStepIdx] || null;
+
+            // Draw Edges
+            edges.forEach(edge => {
+                const u = nodes.find(n => n.id === edge.from
